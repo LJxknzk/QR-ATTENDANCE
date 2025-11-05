@@ -87,18 +87,19 @@ window.addEventListener('resize', () => {
   </div>
   <div class="login-container">
     <div class="button-container" style="display: flex; flex-direction: row; width: 40.078vh; height: 7.786vh;">
-    <button class="tc">Teacher</button>
-    <button class="st">Student</button>
+    <button class="tc" id="teacher-btn" type="button">Teacher</button>
+    <button class="st" id="student-btn" type="button">Student</button>
     </div>
     <div class="login-cell">
       <div>
       <p class="login">Login</p>
     </div>
-    <form>
+    <form id="login-form">
+      <input type="hidden" id="user-type" name="user_type" value="student">
       <label for="email">Email:</label><br>
-      <input type="text" placeholder="email@example.com" id="email" name="email"><br>
+      <input type="text" placeholder="email@example.com" id="email" name="email" required><br>
       <label for="pwd">Password:</label><br>
-      <input type="password" placeholder="******" id="pwd" name="pwd"><br>
+      <input type="password" placeholder="******" id="pwd" name="pwd" required><br>
       <div class="submit-btn">
         <input type="submit" value="Login">
       </div>
@@ -189,6 +190,64 @@ window.addEventListener('resize', () => {
       msgBox.style.display = "none";
     }, 3000);
   }
+
+  // User type toggle
+  let currentUserType = 'student';
+  const teacherBtn = document.getElementById('teacher-btn');
+  const studentBtn = document.getElementById('student-btn');
+  const userTypeInput = document.getElementById('user-type');
+
+  teacherBtn.addEventListener('click', () => {
+    currentUserType = 'teacher';
+    userTypeInput.value = 'teacher';
+    teacherBtn.style.backgroundColor = '#7badd8';
+    teacherBtn.style.color = '#0c1821';
+    studentBtn.style.backgroundColor = '#0c1821';
+    studentBtn.style.color = '#7badd8';
+  });
+
+  studentBtn.addEventListener('click', () => {
+    currentUserType = 'student';
+    userTypeInput.value = 'student';
+    studentBtn.style.backgroundColor = '#7badd8';
+    studentBtn.style.color = '#0c1821';
+    teacherBtn.style.backgroundColor = '#0c1821';
+    teacherBtn.style.color = '#7badd8';
+  });
+
+  // Login form submission
+  document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+      email: formData.get('email'),
+      pwd: formData.get('pwd'),
+      user_type: formData.get('user_type')
+    };
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Login successful! Redirecting...');
+        window.location.href = result.redirect;
+      } else {
+        alert(result.error || 'Login failed');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+      console.error('Login error:', error);
+    }
+  });
 </script>
 </body>
 </html>

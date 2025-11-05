@@ -476,18 +476,7 @@
     </div>
 
     <script>
-        // Sample data for students (simulating database)
-        let students = JSON.parse(localStorage.getItem('students')) || [
-            { id: 1, name: 'John Doe', email: 'john@example.com', section: 'A' },
-            { id: 2, name: 'Jane Smith', email: 'jane@example.com', section: 'B' },
-            { id: 3, name: 'Alice Johnson', email: 'dismaya@example.com', section: 'A' }
-            
-        ];
-
-        // Save to localStorage
-        function saveStudents() {
-            localStorage.setItem('students', JSON.stringify(students));
-        }
+        let students = [];
 
         // Navigation
         const navLinks = document.querySelectorAll('.nav-link');
@@ -518,31 +507,56 @@
 
         // Create Teacher Form
         const teacherForm = document.getElementById('teacher-form');
-        teacherForm.addEventListener('submit', (e) => {
+        teacherForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const fullname = document.getElementById('fullname').value;
             const gmail = document.getElementById('gmail').value;
             const password = document.getElementById('password').value;
 
-            // In a real app, send to backend. Here, just alert.
-            alert(`Teacher account created: ${fullname}, ${gmail}`);
-            teacherForm.reset();
+            try {
+                const response = await fetch('/api/admin/create-teacher', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullname, gmail, password })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Teacher account created: ${fullname}`);
+                    teacherForm.reset();
+                } else {
+                    alert(result.error || 'Failed to create teacher account');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+                console.error('Create teacher error:', error);
+            }
         });
 
         // Populate Dashboard
-        function populateDashboard() {
-            const tbody = document.getElementById('student-records');
-            tbody.innerHTML = '';
-            students.forEach(student => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${student.id}</td>
-                    <td>${student.name}</td>
-                    <td>${student.email}</td>
-                    <td>${student.section}</td>
-                `;
-                tbody.appendChild(row);
-            });
+        async function populateDashboard() {
+            try {
+                const response = await fetch('/api/students');
+                const result = await response.json();
+                
+                if (result.success) {
+                    students = result.students;
+                    const tbody = document.getElementById('student-records');
+                    tbody.innerHTML = '';
+                    students.forEach(student => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${student.id}</td>
+                            <td>${student.name}</td>
+                            <td>${student.email}</td>
+                            <td>-</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
         }
 
         // Populate Edit Select
@@ -578,29 +592,56 @@
             }
         });
 
-        editForm.addEventListener('submit', (e) => {
+        editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = parseInt(studentSelect.value);
-            const student = students.find(s => s.id === id);
-            if (student) {
-                student.name = editName.value;
-                student.email = editEmail.value;
-                student.section = editSection.value;
-                saveStudents();
-                populateDashboard();
-                populateEditSelect();
-                alert('Record updated!');
+            
+            try {
+                const response = await fetch(`/api/student/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: editName.value,
+                        email: editEmail.value
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Record updated!');
+                    populateDashboard();
+                    populateEditSelect();
+                } else {
+                    alert(result.error || 'Failed to update record');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+                console.error('Update error:', error);
             }
         });
 
-        deleteBtn.addEventListener('click', () => {
+        deleteBtn.addEventListener('click', async () => {
             const id = parseInt(studentSelect.value);
-            students = students.filter(s => s.id !== id);
-            saveStudents();
-            populateDashboard();
-            populateEditSelect();
-            editForm.style.display = 'none';
-            alert('Record deleted!');
+            if (!confirm('Are you sure you want to delete this student?')) return;
+            
+            try {
+                const response = await fetch(`/api/student/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Record deleted!');
+                    populateDashboard();
+                    populateEditSelect();
+                    editForm.style.display = 'none';
+                } else {
+                    alert(result.error || 'Failed to delete record');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+                console.error('Delete error:', error);
+            }
         });
 
         // Initialize

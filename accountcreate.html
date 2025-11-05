@@ -85,15 +85,15 @@ window.addEventListener('resize', () => {
       <div>
         <p class="signup">Sign Up</p>
       </div>
-      <form>
+      <form id="student-signup-form">
         <label for="fullname">Full Name (Last, First, Initial):</label><br>
-        <input type="text" placeholder="Student, Name, A." id="fullname" name="fullname"><br>
+        <input type="text" placeholder="Student, Name, A." id="fullname" name="full_name" required><br>
         <label for="email">Email:</label><br>
-        <input type="text" placeholder="email@example.com" id="email" name="email"><br>
+        <input type="email" placeholder="email@example.com" id="email" name="email" required><br>
         <label for="pwd">Password:</label><br>
-        <input type="password" placeholder="******" id="pwd" name="pwd"><br>
+        <input type="password" placeholder="******" id="pwd" name="password" required><br>
         <label for="cpwd">Confirm Password:</label><br>
-        <input type="password" placeholder="********" id="cpwd" name="cpwd"><br>
+        <input type="password" placeholder="********" id="cpwd" name="confirm_password" required><br>
         <div class="submit-btn">
           <input type="submit" value="Create Account">
         </div>
@@ -152,54 +152,59 @@ window.addEventListener('resize', () => {
 });
 </script>
 <script>
-  // Show error popup with animation
-  function showErrorPopup(message) {
-    const popup = document.getElementById('error-popup');
-    popup.textContent = message;
-    popup.classList.add('show');
-    setTimeout(() => {
-    popup.classList.remove('show');
-    }, 4000);
-  }
-
-  // AJAX form submission with client-side missing field validation
-  document.getElementById('student-signup-form').addEventListener('submit', function(e) {
+  // Form submission
+  document.getElementById('student-signup-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const form = e.target;
     const fullName = form['full_name'].value.trim();
     const email = form['email'].value.trim();
     const password = form['password'].value;
     const confirmPassword = form['confirm_password'].value;
+    
     const missingFields = [];
     if (!fullName) missingFields.push('Full Name');
     if (!email) missingFields.push('Email');
     if (!password) missingFields.push('Password');
     if (!confirmPassword) missingFields.push('Confirm Password');
+    
     if (missingFields.length > 0) {
-      showErrorPopup('The following fields are required: ' + missingFields.join(', ') + '.');
+      alert('The following fields are required: ' + missingFields.join(', ') + '.');
       return;
     }
-    const formData = new FormData(form);
-    fetch('signup.php', {
-      method: 'POST',
-      body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        showErrorPopup('Sign up successful! Redirecting...');
-        // If server provided redirect target, use it (e.g., studentpanel.php)
-        const target = data.redirect || 'home.html?signup=success';
-        setTimeout(() => {
-          window.location.href = target;
-        }, 900);
+
+    if (password !== confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+
+    const data = {
+      full_name: fullName,
+      email: email,
+      password: password,
+      confirm_password: confirmPassword
+    };
+
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Account created successfully! Your QR code has been generated. Redirecting to login...');
+        window.location.href = result.redirect || '/?signup=success';
       } else {
-        showErrorPopup(data.error || 'Unknown error occurred.');
+        alert(result.error || 'Unknown error occurred.');
       }
-    })
-    .catch(() => {
-      showErrorPopup('Network error. Please try again.');
-    });
+    } catch (error) {
+      alert('Network error. Please try again.');
+      console.error('Signup error:', error);
+    }
   });
 </script>
 </body>
