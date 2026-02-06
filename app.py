@@ -77,6 +77,13 @@ except Exception as e:
     print(f"⚠ Could not apply ProxyFix: {e}")
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")  # Use a fixed value for local dev
+
+# Session cookie configuration for cross-origin mobile app access (Capacitor WebView)
+# SameSite=None + Secure is required for cookies to be sent on cross-origin requests
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True  # Required when SameSite=None
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
 # Enable CORS for API routes (adjust origins in production). Allow credentialed requests.
 cors_origins = os.environ.get('CORS_ORIGINS', '*')
 if _HAS_FLASK_CORS and CORS is not None:
@@ -166,7 +173,9 @@ else:
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'serve_index'
-login_manager.session_protection = 'strong'
+# Use 'basic' session protection for mobile app compatibility (Capacitor WebView)
+# 'strong' can invalidate sessions unexpectedly in mobile WebViews due to user agent changes
+login_manager.session_protection = 'basic'
 
 
 @app.after_request
