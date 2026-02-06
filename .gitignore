@@ -1,0 +1,97 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Environment variables (NEVER commit these!)
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.sqlite3
+instance/
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Windows Python embeddable
+python-embed/
+
+# Desktop/installer artifacts
+QRAttendance-Setup-1.0.0.exe
+QRAttendance.nsi
+QRAttendance.spec
+desktop_main.spec
+build.ps1
+build.bat
+run.ps1
+DESKTOP_APP_SETUP.md
+desktop_config.json
+
+# PyInstaller and build
+build/
+dist/
+
+# Misc
+__pycache__/
+*.bak
+tools/
+testscanner.py
+test_server.py
+tests/
+railway.json
+uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# PyInstaller
+*.manifest
+*.spec.bak
+
+# Logs
+*.log
+
+# Desktop app build artifacts (keep dist for releases)
+build/
+python-embed/
+
+# Installer outputs
+*.exe
+!dist/QRAttendance.exe
+
+flask-cors>=3.0.10

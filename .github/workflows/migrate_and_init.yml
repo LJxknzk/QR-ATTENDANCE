@@ -1,0 +1,29 @@
+name: Migrate and Init DB
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations/init (uses DATABASE_URL from repo secrets)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FLASK_SECRET_KEY: ${{ secrets.FLASK_SECRET_KEY }}
+        run: |
+          # Attempt to run migrations via flask-migrate; fallback to init script
+          python scripts/auto_migrate.py

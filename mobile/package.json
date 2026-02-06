@@ -1,0 +1,21 @@
+{
+  "name": "qr-attendance-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "copy-web": "node copy-web.js",
+    "init-capacitor": "npx cap init qr-attendance com.example.qrattendance --web-dir=www",
+    "add-android": "npx cap add android",
+    "add-ios": "npx cap add ios",
+    "copy": "npx cap copy",
+    "open-android": "npx cap open android",
+    "open-ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor-community/barcode-scanner": "^2.1.1",
+    "@capacitor-community/http": "^1.4.1",
+    "@capacitor/android": "^5.0.0",
+    "@capacitor/cli": "^5.0.0",
+    "@capacitor/core": "^5.0.0"
+  }
+}

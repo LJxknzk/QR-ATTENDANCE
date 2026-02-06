@@ -1,0 +1,67 @@
+{
+  "appId": "com.example.qrattendance",
+  "appName": "qr-attendance",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "url": "https://web-production-9f007.up.railway.app/"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  },
+  "http": {
+    "url": "https://web-production-9f007.up.railway.app/api/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "data": {
+      "email": "",
+      "password": "",
+      "user_type": ""
+    }
+  },
+  "fetch": {
+    "url": "https://web-production-9f007.up.railway.app/api/login",
+    "method": "POST",
+    "credentials": "include",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "email": "",
+      "password": "",
+      "user_type": ""
+    }
+  },
+  "httpClient": {
+    "url": "https://web-production-9f007.up.railway.app/api/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "data": {
+      "email": "",
+      "password": "",
+      "user_type": ""
+    }
+  },
+  "login": {
+    "url": "https://web-production-9f007.up.railway.app/api/login",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "data": {
+      "email": "",
+      "password": "",
+      "user_type": ""
+    }
+  },
+  "codeChange": {
+    "response": "const response = await Http.post({ url: 'https://web-production-9f007.up.railway.app/api/login', headers: { 'Content-Type': 'application/json' }, data: data }); const result = response.data;"
+  },
+  "loginFormSubmit": "loginForm.addEventListener('submit', async function(e) { e.preventDefault(); try { const response = await Http.post({ url: 'https://your-render-url.onrender.com/api/login', headers: { 'Content-Type': 'application/json' }, data: data }); const result = response.data; if (result.success) { alert('Login successful! Redirecting...'); window.location.href = result.redirect; } else { alert(result.error || 'Login failed'); } } catch (error) { alert('Network error. Please try again.'); console.error('Login error:', error); } });",
+  "script": "<script type=\"module\">\nimport { Http } from '@capacitor-community/http';\n// ...rest of your code...\"\n"
+}
