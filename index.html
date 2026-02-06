@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LYFJSHS QR HOME</title>
+  <link rel="stylesheet" href="CSS/stuff.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+</head>
+<script>
+    document.querySelectorAll('.dropbtn').forEach(button => {
+  button.addEventListener('click', e => {
+    e.stopPropagation();
+
+    const dropdown = button.nextElementSibling;
+    const isShown = dropdown.classList.contains('show');
+
+    // Close all dropdowns first
+    document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+      dc.classList.remove('show');
+      dc.style.left = '';
+      dc.style.right = '';
+    });
+
+    if (!isShown) { 
+      dropdown.classList.add('show');
+
+      // Check overflow and adjust alignment if needed
+      const rect = dropdown.getBoundingClientRect();
+      const overflowRight = rect.right - window.innerWidth;
+
+      if (overflowRight > 0) {
+        dropdown.style.left = 'auto';
+        dropdown.style.right = '0';
+      } else {
+        dropdown.style.left = '0';
+        dropdown.style.right = 'auto';
+      }
+    }
+  });
+});
+
+// Close dropdowns if clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+    dc.classList.remove('show');
+    dc.style.left = '';
+    dc.style.right = '';
+  });
+});
+
+// Optional: close on window resize to avoid stuck dropdowns
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+    dc.classList.remove('show');
+    dc.style.left = '';
+    dc.style.right = '';
+  });
+});
+</script>
+<body>
+  <nav class="navbar">
+    <div class="nav-header">
+      <p class="luis">Luis Y. Ferrer Jr. Senior High School</p>
+      <p class="qr">QR Attendance</p>
+    </div>
+    <button class="hamburger" aria-label="Toggle menu" aria-expanded="false">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </button>
+    <div class="create-container">
+      <button class="create-button" onclick="window.location.href='accountcreate.html'">
+        Create Account
+      </button>
+    </div>
+    </div>
+  </nav>
+  <div class="text-container">
+      <p class="attend">ATTENDANCE WITH ONE SCAN.</p>
+      <p class="this">This website is purely made for Luis Y. Ferrer Jr. Senior High School, and will not be used in any other schools.</p>
+  </div>
+  <div class="login-container">
+    <div class="button-container" style="display: flex; flex-direction: row; width: 40.078vh; height: 7.786vh;">
+    <button class="tc" id="teacher-btn" type="button">Teacher</button>
+    <button class="st" id="student-btn" type="button">Student</button>
+    </div>
+    <div class="login-cell">
+      <div>
+      <p class="login">Login</p>
+    </div>
+    <form id="login-form">
+      <input type="hidden" id="user-type" name="user_type" value="student">
+      <label for="email">Email:</label><br>
+      <input type="text" placeholder="email@example.com" id="email" name="email" required><br>
+      <label for="pwd">Password:</label><br>
+      <input type="password" placeholder="******" id="pwd" name="pwd" required><br>
+      <div style="margin:10px 0; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="agree-privacy-web" name="agree_privacy">
+        <label for="agree-privacy-web" style="font-size:0.95rem;">I agree to the Data Privacy statement (<a href="#" id="privacy-link-web">Data Privacy Act - RA 10173</a>)</label>
+      </div>
+      <div class="submit-btn">
+        <input type="submit" value="Login">
+      </div>
+    </form>
+    <div style="display: flex; text-align: center; width: 47.786vh; height: 4.622vh;">
+      <p style="font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-style: italic; color: rgba(12, 24, 33, 50%);">Are you a new student? Just click the “Create Account” to create your own QR code!</p>
+    </div>
+    </div>
+  </div>
+  <!-- Signup Success Message -->
+<div id="signup-message" style="
+  display: none;
+  padding: 10px;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 5px;
+  margin: 20px;
+  text-align: center;
+  font-weight: bold;
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+">
+  Signup successful!
+</div>
+
+<script>
+  // Function to read query parameters
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
+
+  // Show signup success message if "signup=success" is in URL
+  if (getQueryParam("signup") === "success") {
+    const msgBox = document.getElementById("signup-message");
+    msgBox.style.display = "block";
+
+    // Optional: Hide after 3 seconds
+    setTimeout(() => {
+      msgBox.style.display = "none";
+    }, 3000);
+  }
+
+  // User type toggle
+  let currentUserType = 'student';
+  const teacherBtn = document.getElementById('teacher-btn');
+  const studentBtn = document.getElementById('student-btn');
+  const userTypeInput = document.getElementById('user-type');
+  const loginForm = document.getElementById('login-form');
+
+  // Initialize student button as active
+  studentBtn.style.backgroundColor = '#7badd8';
+  studentBtn.style.color = '#0c1821';
+  teacherBtn.style.backgroundColor = '#0c1821';
+  teacherBtn.style.color = '#7badd8';
+
+  teacherBtn.addEventListener('click', () => {
+    currentUserType = 'teacher';
+    userTypeInput.value = 'teacher';
+    teacherBtn.style.backgroundColor = '#7badd8';
+    teacherBtn.style.color = '#0c1821';
+    studentBtn.style.backgroundColor = '#0c1821';
+    studentBtn.style.color = '#7badd8';
+    // Clear form when switching
+    loginForm.reset();
+    userTypeInput.value = 'teacher';
+  });
+
+  studentBtn.addEventListener('click', () => {
+    currentUserType = 'student';
+    userTypeInput.value = 'student';
+    studentBtn.style.backgroundColor = '#7badd8';
+    studentBtn.style.color = '#0c1821';
+    teacherBtn.style.backgroundColor = '#0c1821';
+    teacherBtn.style.color = '#7badd8';
+    // Clear form when switching
+    loginForm.reset();
+    userTypeInput.value = 'student';
+  });
+
+  // Login form submission
+  loginForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    // Ensure user agreed to privacy statement
+    const agree = document.getElementById('agree-privacy-web');
+    if (!agree || !agree.checked) {
+      alert('You must agree to the Data Privacy statement to continue.');
+      return;
+    }
+
+    // Ensure user_type matches the selected button
+    const selectedUserType = currentUserType;
+    
+    const formData = new FormData(this);
+    const data = {
+      email: formData.get('email'),
+      pwd: formData.get('pwd'),
+      user_type: selectedUserType  // Force use the selected user type
+    };
+
+    // Validate that user_type is set correctly
+    if (!data.user_type || (data.user_type !== 'student' && data.user_type !== 'teacher')) {
+      alert('Please select Student or Teacher login type');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Login successful! Redirecting...');
+        window.location.href = result.redirect;
+      } else {
+        alert(result.error || 'Login failed');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+      console.error('Login error:', error);
+    }
+  });
+</script>
+
+<!-- Privacy modal (moved inside body so it overlays correctly) -->
+<div id="privacy-modal" class="privacy-modal" style="display:none;">
+  <div role="dialog" aria-modal="true" class="privacy-dialog">
+    <button id="privacy-close" class="privacy-close">✕</button>
+    <h2 style="margin-top:0;color:#0c1821;">Privacy & Data Use Agreement</h2>
+    <div style="line-height:1.5;font-size:0.95rem;">
+      <p><strong>Our role in your Privacy</strong><br>We value your privacy and are fully committed to protecting your personal information. We only use the information we gather—like your name, email address, or usage information—to enhance our services and give you a better user experience.</p>
+      <p>Your personal information is never and will never be sold to third parties for any reason.</p>
+      <p>By using our services, you agree to the collection and use of information in accordance with this Privacy Policy.</p>
+      <h3>Our Responsibilities</h3>
+      <p>We do not sell, trade, rent, or exchange your personal information with third parties. Your data is shared only with your explicit consent or when required by law.</p>
+      <p>Appropriate technical and organizational security measures are in place to protect your information from unauthorized access, loss, misuse, or disclosure.</p>
+      <h3>Your responsibilities</h3>
+      <p>In addition, you contribute to privacy protection by:</p>
+      <ul>
+        <li>Keeping your passwords and account information private.</li>
+        <li>Reviewing this Privacy Policy regularly.</li>
+        <li>Notifying us right away if you think your account or personal data has been used without authorization.</li>
+      </ul>
+      <h3>When and how we collect data</h3>
+      <p>We collect personal information when students or teachers register or create an account, including their name, Gmail address, contact number, section, and assigned teacher.</p>
+      <p>When using the QR Attendance system, additional data is gathered, including device information, date and time of scans, and attendance scan records.</p>
+      <h3>Contact details</h3>
+      <p>We collect basic information necessary for attendance, recording, identification, including: Full name, Gmail address, Contact number, Section, Assigned teacher.</p>
+      <h3>Data that identifies you</h3>
+      <p>We collect information that helps confirm your identity for attendance purposes, including student identification details and the QR code generated identifier linked to your account. All collected data is used for attendance tracking, record management, and system improvement.</p>
+      <h3>How and why we use your data</h3>
+      <p>We use the information we collect to manage attendance records, maintain accounts, improve our services and respond to inquiries.</p>
+      <p style="margin-top:1rem;font-size:0.9rem;">For more information see: <a href="https://privacy.gov.ph/data-privacy-act/?fbclid=IwY2xjawPjA_tleHRuA2FlbQIxMQBzcnRjBmFwcF9pZAEwAAEejLQ5sT2OxYPicOOfumUvgxADPPJtVsQGs8c25spPJa1os1vlKMuwuHMCltk_aem_vlJ8zzJ0tJbVDqefllNEYg" target="_blank" rel="noopener">Data Privacy Act details</a></p>
+    </div>
+    <div style="text-align:right;margin-top:14px;"><button id="privacy-accept" class="privacy-accept-button">Close</button></div>
+  </div>
+</div>
+<script>
+document.getElementById('privacy-link-web')?.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('privacy-modal').style.display='flex'; });
+document.getElementById('privacy-close')?.addEventListener('click', function(){ document.getElementById('privacy-modal').style.display='none'; });
+document.getElementById('privacy-accept')?.addEventListener('click', function(){ document.getElementById('privacy-modal').style.display='none'; });
+</script>
+</body>
+</html>

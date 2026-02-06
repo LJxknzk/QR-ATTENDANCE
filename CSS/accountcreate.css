@@ -1,0 +1,286 @@
+/* Basic reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Navbar styles */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 14.518vh;
+  background-color: #0c1821; /* Dark green */
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+
+/* Header text moved left with bigger font */
+.nav-header {
+  padding-left: 18.4px;
+}
+/*Text for the navbar*/
+.luis,
+.qr {
+  text-align: left;
+  font-family: "DM Sans", sans-serif;
+  color: #ccc9dc;
+}
+.luis {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.qr {
+  display: block;
+  font-size: 1.25rem;
+  font-style: italic;
+}
+
+/*navbar button*/
+.create-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32.75vh;
+  height: 11.14vh;
+}
+.create-button {
+  font-family: "DM Sans", sans-serif;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #0c1821;
+  background-color: #ccc9dc;
+  border-style: none;
+  border-radius: 34px;
+  width: 25.026vh;
+  height: 7.786vh;
+  transition: color 0.15s ease, transform 0.15s ease-out, background-color 0.15s ease-out;
+}
+.create-button:hover {
+  transform: scale(1.05);
+  color: black;
+}
+.create-button:active {
+  background-color: #a8a5b8;
+  transform: scale(0.905);
+}
+
+/* Hamburger button hidden on desktop */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 25px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hamburger .bar {
+  height: 3px;
+  width: 75%;
+  background-color: white;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+/*signup form and container*/
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  width: 65.104vh;
+  min-height: 80.87vh;
+  height: auto;
+}
+
+.signup-box {
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: #0c1821;
+  width: 65.104vh;
+  min-height: 79.016vh;
+  height: auto;
+  padding: 30px 20px;
+  gap: 5px;
+}
+
+.signup {
+  font-family: "DM Sans", sans-serif;
+  font-size: 2.7rem;
+  font-weight: bold;
+  color: #7badd8;
+}
+
+/* Form styles*/
+.submit-btn {
+  text-align: center;
+}
+label {
+  margin-left: 10px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 1.667rem;  
+  color: #7badd8;
+}
+input[placeholder] {
+  font-style: italic;
+}
+input[type=text], input[type=password], input[type=email], input[type=tel] {
+  font-family: "DM Sans", sans-serif;
+  background-color: #ccc9dc;
+  border-style: none;
+  border-radius: 12px;
+  padding-left: 10px;
+  font-size: 0.929rem;
+  width: 60.378vh;
+  height: 5.716vh;
+  margin-bottom: 2.638vh;
+  transition: background-color 0.15s ease-in;
+}
+input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, input[type=tel]:focus {
+  background-color:#b1aebf;
+}
+
+
+/* Select dropdown styles */
+select {
+  font-family: "DM Sans", sans-serif;
+  background-color: #ccc9dc;
+  border: none;
+  border-radius: 12px;
+  padding: 0 10px;
+  font-size: 0.929rem;
+  width: 60.378vh;
+  height: 5.716vh;
+  margin-bottom: 2.638vh;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%230c1821%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+}
+select:focus {
+  background-color: #b1aebf;
+  outline: none;
+}
+
+input[type=submit] {
+  background-color: #7badd8;
+  color: #0c1821;
+  border-style: none;
+  border-radius: 24px;
+  font-family: "DM Sans", sans-serif;
+  font-weight: bold;
+  font-size: 2rem;
+  width: 38.561vh;
+  height: 8.741vh;
+  transition: transform 0.15s ease-in-out, background-color 0.15s ease-in, color 0.15s ease-in;
+}
+input[type=submit]:hover {
+  transform: scale(1.05);
+}
+input[type=submit]:active {
+  background-color: #1b4569;
+  transform: scale(0.905);
+}
+/* Body and main container */
+body {
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 140px 77px 0px; /* padding-top for fixed navbar */
+  background: linear-gradient(to bottom, #324a5f, #405d76);
+}
+
+main {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) {
+  body { padding: 100px 30px 30px; }
+  .signup-form, .signup-box { width: 90%; }
+  input[type=text], input[type=password], input[type=email], input[type=tel], select { width: 92%; }
+  input[type=submit] { width: 60%; }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+  body { padding: 80px 12px 20px; }
+  .signup-form, .signup-box { width: 100%; padding: 20px; }
+  .signup { font-size: 2rem; }
+  label { font-size: 1rem; }
+  input[type=text], input[type=password], input[type=email], input[type=tel], select { width: 100%; height: 48px; font-size: 0.95rem; }
+  input[type=submit] { width: 100%; height: 52px; font-size: 1.25rem; }
+  .create-button { width: 140px; height: 40px; }
+  .navbar { height: 70px; }
+  .luis { font-size: 1.1rem; }
+  .qr { font-size: 0.9rem; }
+}
+
+/* Privacy modal (shared) -------------------------------------------------- */
+.privacy-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  z-index: 2000;
+}
+.privacy-modal.show {
+  display: flex;
+}
+.privacy-dialog {
+  background: #ffffff;
+  color: #0c1821;
+  width: 90%;
+  max-width: 900px;
+  max-height: 80vh;
+  overflow: auto;
+  border-radius: 10px;
+  padding: 20px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  position: relative;
+}
+.privacy-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.privacy-accept-button {
+  background: #0c1821;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}

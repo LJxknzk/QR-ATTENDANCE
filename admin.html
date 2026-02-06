@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="CSS/stuff.css">
+    <link rel="stylesheet" href="CSS/pages.css">
+    <script defer src="JS/mobile-nav.js"></script>
+    <script>
+        // Configurable API base URL - set `window.SERVER_URL` at runtime to point to central server
+        // Also supports query param `?server=` for quick overrides.
+        let BASE_URL = (typeof SERVER_URL !== 'undefined' && SERVER_URL) ? SERVER_URL.replace(/\/$/, '') : '';
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const s = params.get('server');
+            if (!BASE_URL && s) BASE_URL = s.replace(/\/$/, '');
+        } catch (e) {}
+    </script>
+</head>
+<body>
+    <!-- Main Navbar -->
+    <nav class="navbar">
+        <div class="nav-header">
+            <span class="luis">Admin Panel</span>
+            <span class="qr">Management System</span>
+        </div>
+        <button class="hamburger" id="hamburger">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </button>
+        <div class="create-container">
+            <button class="create-button" id="logout-btn">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Side Navbar -->
+    <nav class="side-navbar" id="side-navbar">
+        <a href="#" class="nav-link active" data-section="create-teacher">Create Teacher</a>
+        <a href="#" class="nav-link" data-section="dashboard">Dashboard</a>
+        <a href="#" class="nav-link" data-section="attendance-stats">Attendance Stats</a>
+        <a href="#" class="nav-link" data-section="student-stats">Student Statistics</a>
+        <a href="#" class="nav-link" data-section="time-config">Time Settings</a>
+        <!-- Edit Student removed -->
+        <a href="#" class="nav-link" data-section="db-manager">Database Manager</a>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Create Teacher Section -->
+        <div id="create-teacher" class="content-section active">
+            <h2>Create Teacher Account</h2>
+            <form id="teacher-form" class="admin-form">
+                <div class="form-group">
+                    <label for="fullname">Full Name</label>
+                    <input type="text" id="fullname" name="fullname" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="gmail">Gmail</label>
+                    <input type="email" id="gmail" name="gmail" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="grade_level">Grade Level</label>
+                    <select id="grade_level" name="grade_level" required>
+                        <option value="">Select Grade Level</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="section">Section Name</label>
+                    <input type="text" id="section" name="section" placeholder="e.g., STEM-A, ABM-1, HUMSS-B" required>
+                </div>
+
+                <button type="submit" class="submit-btn">Create Teacher Account</button>
+            </form>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="content-section">
+            <h2>Student Records</h2>
+            <div class="table-wrapper">
+                <table class="student-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Section</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-records">
+                        <!-- Records will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Edit Student UI removed per request -->
+
+        <!-- Attendance Stats Section (Dashboard with graphs) -->
+        <div id="attendance-stats" class="content-section">
+            <h2>Attendance Statistics</h2>
+            <p style="color:#666; margin-bottom: 20px;">Today's attendance overview for all sections</p>
+            
+            <!-- Status Summary Cards -->
+            <div class="stats-container" id="attendance-summary">
+                <div class="stat-card stat-total">
+                    <div class="stat-value" id="total-students">0</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card stat-present">
+                    <div class="stat-value" id="total-present">0</div>
+                    <div class="stat-label">✓ Present</div>
+                </div>
+                <div class="stat-card stat-absent">
+                    <div class="stat-value" id="total-absent">0</div>
+                    <div class="stat-label">✗ Absent</div>
+                </div>
+                <div class="stat-card stat-late">
+                    <div class="stat-value" id="total-late">0</div>
+                    <div class="stat-label">⏱ Late</div>
+                </div>
+                <div class="stat-card stat-cutting">
+                    <div class="stat-value" id="total-cutting">0</div>
+                    <div class="stat-label">⚠ Cutting</div>
+                </div>
+                <div class="stat-card stat-excused">
+                    <div class="stat-value" id="total-excused">0</div>
+                    <div class="stat-label">ℹ Excused</div>
+                </div>
+            </div>
+            
+            <!-- Status Bar Chart -->
+            <div class="chart-container" style="margin: 30px 0;">
+                <h3>Status Distribution</h3>
+                <div id="status-chart" class="bar-chart">
+                    <!-- Chart will be rendered here -->
+                </div>
+            </div>
+            
+            <!-- Per-Section Breakdown -->
+            <div class="section-breakdown">
+                <h3>Breakdown by Section</h3>
+                <div id="section-stats-container" class="table-wrapper">
+                    <table class="student-table">
+                        <thead>
+                            <tr>
+                                <th>Section</th>
+                                <th>Total</th>
+                                <th>Present</th>
+                                <th>Absent</th>
+                                <th>Late</th>
+                                <th>Cutting</th>
+                            </tr>
+                        </thead>
+                        <tbody id="section-stats-tbody">
+                            <!-- Stats will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Auto-Mark Button -->
+            <div style="margin-top: 30px; text-align: center;">
+                <button id="auto-mark-btn" class="submit-btn" style="background: #e53e3e;">
+                    🔄 Run Auto-Mark (Absent/Cutting)
+                </button>
+                <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                    <button id="attendance-print-btn" class="submit-btn" style="background:#4caf50;">Print Attendance</button>
+                    <button id="attendance-csv-btn" class="submit-btn">Download CSV</button>
+                    <button id="attendance-pdf-btn" class="submit-btn">Download PDF</button>
+                </div>
+                <p style="color:#666; font-size: 12px; margin-top: 10px;">
+                    This will mark students as ABSENT if not checked in, or CUTTING if not checked out
+                </p>
+            </div>
+        </div>
+
+        <!-- Student Statistics Section -->
+        <div id="student-stats" class="content-section">
+            <h2>Student Statistics</h2>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px; flex-wrap:wrap;">
+                <label>Start: <input type="date" id="stats-start"></label>
+                <label>End: <input type="date" id="stats-end"></label>
+                <button id="stats-filter-btn" class="submit-btn">Load</button>
+                <button id="stats-print-btn" class="submit-btn" style="background:#4caf50;">Print</button>
+                <button id="stats-csv-btn" class="submit-btn">Download CSV</button>
+                <button id="stats-pdf-btn" class="submit-btn">Download PDF</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="student-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Teacher</th>
+                            <th>Section</th>
+                            <th>Present</th>
+                            <th>Absent</th>
+                            <th>Late</th>
+                            <th>Cutting</th>
+                            <th>%</th>
+                            <th>Last Check-in</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-stats-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Time Configuration Section -->
+        <div id="time-config" class="content-section">
+            <h2>Attendance Time Settings</h2>
+            <p style="color:#666; margin-bottom: 20px;">Configure check-in/check-out times and notification settings</p>
+            
+            <form id="time-config-form" class="admin-form">
+                <h3 style="margin-bottom: 15px;">Check-in Times</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="check-in-start">Check-in Start Time</label>
+                        <input type="time" id="check-in-start" name="check_in_start_time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="check-in-end">Check-in End Time (Late After)</label>
+                        <input type="time" id="check-in-end" name="check_in_end_time" required>
+                    </div>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px;">Check-out Times</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="check-out-start">Check-out Start Time</label>
+                        <input type="time" id="check-out-start" name="check_out_start_time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="check-out-end">Check-out End Time (Cutting After)</label>
+                        <input type="time" id="check-out-end" name="check_out_end_time" required>
+                    </div>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px;">Afternoon Shift Times</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="afternoon-check-in-start">Afternoon Check-in Start</label>
+                        <input type="time" id="afternoon-check-in-start" name="afternoon_check_in_start_time">
+                    </div>
+                    <div class="form-group">
+                        <label for="afternoon-check-in-end">Afternoon Check-in End</label>
+                        <input type="time" id="afternoon-check-in-end" name="afternoon_check_in_end_time">
+                    </div>
+                </div>
+                <div class="form-row" style="margin-top:12px;">
+                    <div class="form-group">
+                        <label for="afternoon-check-out-start">Afternoon Check-out Start</label>
+                        <input type="time" id="afternoon-check-out-start" name="afternoon_check_out_start_time">
+                    </div>
+                    <div class="form-group">
+                        <label for="afternoon-check-out-end">Afternoon Check-out End</label>
+                        <input type="time" id="afternoon-check-out-end" name="afternoon_check_out_end_time">
+                    </div>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px;">Auto-Mark Settings</h3>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="auto-absent" name="auto_mark_absent_enabled" checked>
+                        Auto-mark students as ABSENT if not checked in by deadline
+                    </label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="auto-cutting" name="auto_mark_cutting_enabled" checked>
+                        Auto-mark students as CUTTING if not checked out by deadline
+                    </label>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px;">Email Notification Settings</h3>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="email-enabled" name="email_notifications_enabled" checked>
+                        Enable email notifications to guardians
+                    </label>
+                </div>
+                <div class="form-group checkbox-group" style="margin-left: 20px;">
+                    <label><input type="checkbox" id="notify-present" name="notify_on_present" checked> Notify on PRESENT</label>
+                </div>
+                <div class="form-group checkbox-group" style="margin-left: 20px;">
+                    <label><input type="checkbox" id="notify-absent" name="notify_on_absent" checked> Notify on ABSENT</label>
+                </div>
+                <div class="form-group checkbox-group" style="margin-left: 20px;">
+                    <label><input type="checkbox" id="notify-late" name="notify_on_late" checked> Notify on LATE</label>
+                </div>
+                <div class="form-group checkbox-group" style="margin-left: 20px;">
+                    <label><input type="checkbox" id="notify-cutting" name="notify_on_cutting" checked> Notify on CUTTING</label>
+                </div>
+                <div class="form-group checkbox-group" style="margin-left: 20px;">
+                    <label><input type="checkbox" id="notify-excused" name="notify_on_excused" checked> Notify on EXCUSED</label>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px;">📧 Gmail SMTP Settings</h3>
+                <p style="color:#888; font-size: 0.9rem; margin-bottom: 15px;">
+                    Configure email sending. Get your App Password from: 
+                    <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:#7badd8;">Google App Passwords</a>
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="smtp-email">Gmail Address</label>
+                        <input type="email" id="smtp-email" name="smtp_email" placeholder="yourname@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="smtp-password">Gmail App Password (16 characters)</label>
+                        <input type="password" id="smtp-password" name="smtp_password" placeholder="xxxx xxxx xxxx xxxx">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="smtp-server">SMTP Server</label>
+                        <input type="text" id="smtp-server" name="smtp_server" value="smtp.gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="smtp-port">SMTP Port</label>
+                        <input type="number" id="smtp-port" name="smtp_port" value="587">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+                    <button type="submit" class="submit-btn">Save Configuration</button>
+                    <button type="button" id="test-email-btn" class="submit-btn" style="background: #48bb78;">📧 Send Test Email</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Database Manager Section -->
+        <div id="db-manager" class="content-section">
+            <h2>Database Manager</h2>
+            
+            <!-- DB Stats -->
+            <div id="db-stats" class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-students">0</div>
+                    <div class="stat-label">Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-teachers">0</div>
+                    <div class="stat-label">Teachers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-attendance">0</div>
+                    <div class="stat-label">Attendance Records</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-container">
+                <button class="db-tab active" data-tab="students-table">Students</button>
+                <button class="db-tab" data-tab="teachers-table">Teachers</button>
+                <button class="db-tab" data-tab="attendance-table">Attendance</button>
+            </div>
+
+            <!-- Students Table -->
+            <div id="students-table" class="db-table-container" style="display:block;">
+                <table class="student-table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Section</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-students-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- Teachers Table -->
+            <div id="teachers-table" class="db-table-container" style="display:none;">
+                <table class="student-table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Grade</th>
+                            <th>Section</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-teachers-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- Attendance Table -->
+            <div id="attendance-table" class="db-table-container" style="display:none;">
+                <div class="filter-container">
+                    <input type="date" id="attendance-date-filter" placeholder="Filter by date">
+                    <button id="attendance-filter-btn" class="filter-btn">Filter</button>
+                </div>
+                <table class="student-table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>Record ID</th>
+                            <th>Student Name</th>
+                            <th>Student Email</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-attendance-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let students = [];
+
+        // Navigation
+        const navLinks = document.querySelectorAll('.nav-link');
+        const contentSections = document.querySelectorAll('.content-section');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = e.target.getAttribute('data-section');
+
+                // Remove active class from all links and sections
+                navLinks.forEach(l => l.classList.remove('active'));
+                contentSections.forEach(s => s.classList.remove('active'));
+
+                // Add active class to clicked link and corresponding section
+                e.target.classList.add('active');
+                document.getElementById(section).classList.add('active');
+            });
+        });
+
+        // Hamburger menu for mobile
+        const hamburger = document.getElementById('hamburger');
+        const sideNavbar = document.getElementById('side-navbar');
+
+        hamburger.addEventListener('click', () => {
+            sideNavbar.classList.toggle('active');
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${BASE_URL}/api/logout`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = result.redirect || '/';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/';
+            }
+        });
+
+        // Create Teacher Form
+        const teacherForm = document.getElementById('teacher-form');
+        teacherForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullname = document.getElementById('fullname').value;
+            const gmail = document.getElementById('gmail').value;
+            const password = document.getElementById('password').value;
+            const grade_level = document.getElementById('grade_level').value;
+            const section = document.getElementById('section').value;
+
+            if (!grade_level) {
+                alert('Please select a grade level');
+                return;
+            }
+            if (!section) {
+                alert('Please enter a section name');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/admin/create-teacher`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullname, gmail, password, grade_level, section })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Teacher account created: ${fullname}\nAssigned to: Grade ${grade_level} - ${section}`);
+                    teacherForm.reset();
+                } else {
+                    alert(result.error || 'Failed to create teacher account');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+                console.error('Create teacher error:', error);
+            }
+        });
+
+        // Populate Dashboard
+        async function populateDashboard() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/students`, { credentials: 'include' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    students = result.students;
+                    const tbody = document.getElementById('student-records');
+                    tbody.innerHTML = '';
+                    
+                    // Get status for each student
+                    for (const student of students) {
+                        try {
+                            const statusResponse = await fetch(`/api/student/${student.id}/status`, { credentials: 'include' });
+                            const statusResult = await statusResponse.json();
+                            
+                            const row = document.createElement('tr');
+                            const status = statusResult.success ? 
+                                (statusResult.current_status === 'checked_in' ? 'Checked In' : 'Checked Out') : 
+                                'Unknown';
+                            
+                            row.innerHTML = `
+                                <td>${student.id}</td>
+                                <td>${student.name}</td>
+                                <td>${student.email}</td>
+                                <td>${student.section || '-'}</td>
+                                <td>${status}</td>
+                            `;
+                            tbody.appendChild(row);
+                        } catch (err) {
+                            console.error(`Error getting status for student ${student.id}:`, err);
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${student.id}</td>
+                                <td>${student.name}</td>
+                                <td>${student.email}</td>
+                                <td>${student.section || '-'}</td>
+                                <td>Unknown</td>
+                            `;
+                            tbody.appendChild(row);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
+        }
+
+        // Load admin config into the time-config form
+        async function loadAdminConfig() {
+            try {
+                const res = await fetch(`${BASE_URL}/api/admin/config`, { credentials: 'include' });
+                const data = await res.json();
+                if (!data.success) return;
+                const c = data.config;
+                document.getElementById('check-in-start').value = c.check_in_start_time || '';
+                document.getElementById('check-in-end').value = c.check_in_end_time || '';
+                document.getElementById('check-out-start').value = c.check_out_start_time || '';
+                document.getElementById('check-out-end').value = c.check_out_end_time || '';
+
+                document.getElementById('afternoon-check-in-start').value = c.afternoon_check_in_start_time || '';
+                document.getElementById('afternoon-check-in-end').value = c.afternoon_check_in_end_time || '';
+                document.getElementById('afternoon-check-out-start').value = c.afternoon_check_out_start_time || '';
+                document.getElementById('afternoon-check-out-end').value = c.afternoon_check_out_end_time || '';
+
+                document.getElementById('auto-absent').checked = !!c.auto_mark_absent_enabled;
+                document.getElementById('auto-cutting').checked = !!c.auto_mark_cutting_enabled;
+                document.getElementById('email-enabled').checked = !!c.email_notifications_enabled;
+                document.getElementById('notify-present').checked = !!c.notify_on_present;
+                document.getElementById('notify-absent').checked = !!c.notify_on_absent;
+                document.getElementById('notify-late').checked = !!c.notify_on_late;
+                document.getElementById('notify-cutting').checked = !!c.notify_on_cutting;
+                document.getElementById('notify-excused').checked = !!c.notify_on_excused;
+
+                document.getElementById('smtp-email').value = c.smtp_email || '';
+                document.getElementById('smtp-password').value = c.smtp_password || '';
+                document.getElementById('smtp-server').value = c.smtp_server || '';
+                document.getElementById('smtp-port').value = c.smtp_port || '';
+            } catch (err) {
+                console.error('Failed to load admin config', err);
+            }
+        }
+
+        // Save admin config
+        document.getElementById('time-config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                check_in_start_time: document.getElementById('check-in-start').value,
+                check_in_end_time: document.getElementById('check-in-end').value,
+                check_out_start_time: document.getElementById('check-out-start').value,
+                check_out_end_time: document.getElementById('check-out-end').value,
+                afternoon_check_in_start_time: document.getElementById('afternoon-check-in-start').value,
+                afternoon_check_in_end_time: document.getElementById('afternoon-check-in-end').value,
+                afternoon_check_out_start_time: document.getElementById('afternoon-check-out-start').value,
+                afternoon_check_out_end_time: document.getElementById('afternoon-check-out-end').value,
+                auto_mark_absent_enabled: document.getElementById('auto-absent').checked,
+                auto_mark_cutting_enabled: document.getElementById('auto-cutting').checked,
+                email_notifications_enabled: document.getElementById('email-enabled').checked,
+                notify_on_present: document.getElementById('notify-present').checked,
+                notify_on_absent: document.getElementById('notify-absent').checked,
+                notify_on_late: document.getElementById('notify-late').checked,
+                notify_on_cutting: document.getElementById('notify-cutting').checked,
+                notify_on_excused: document.getElementById('notify-excused').checked,
+                smtp_email: document.getElementById('smtp-email').value,
+                smtp_password: document.getElementById('smtp-password').value,
+                smtp_server: document.getElementById('smtp-server').value,
+                smtp_port: document.getElementById('smtp-port').value,
+            };
+
+            try {
+                const res = await fetch(`${BASE_URL}/api/admin/config`, {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    alert('Configuration saved');
+                } else {
+                    alert(result.error || 'Failed to save configuration');
+                }
+            } catch (err) {
+                console.error('Save config failed', err);
+                alert('Network error saving configuration');
+            }
+        });
+
+        // Initialize admin page state
+        loadAdminConfig();
+
+        // Edit student UI removed: guard any legacy code that expects elements
+        function populateEditSelect() {
+            const select = document.getElementById('student-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">Select a Student</option>';
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.name} (${student.email})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Safely wire edit form only if elements exist (backwards compatibility)
+        (function initEditFormIfPresent(){
+            const studentSelect = document.getElementById('student-select');
+            const editForm = document.getElementById('edit-form');
+            if (!studentSelect || !editForm) return;
+
+            const editName = document.getElementById('edit-name');
+            const editEmail = document.getElementById('edit-email');
+            const editSection = document.getElementById('edit-section');
+            const deleteBtn = document.getElementById('delete-btn');
+
+            studentSelect.addEventListener('change', () => {
+                const id = parseInt(studentSelect.value);
+                const student = students.find(s => s.id === id);
+                if (student) {
+                    editName.value = student.name;
+                    editEmail.value = student.email;
+                    editSection.value = student.section || '';
+                    editForm.style.display = 'block';
+                } else {
+                    editForm.style.display = 'none';
+                }
+            });
+
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = parseInt(studentSelect.value);
+                try {
+                    const response = await fetch(`/api/student/${id}`, {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: editName.value,
+                            email: editEmail.value,
+                            section: editSection.value
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Record updated!');
+                        populateDashboard();
+                        populateEditSelect();
+                    } else {
+                        alert(result.error || 'Failed to update record');
+                    }
+                } catch (error) {
+                    alert('Network error. Please try again.');
+                    console.error('Update error:', error);
+                }
+            });
+
+            deleteBtn.addEventListener('click', async () => {
+                const id = parseInt(studentSelect.value);
+                if (!confirm('Are you sure you want to delete this student?')) return;
+                try {
+                    const response = await fetch(`/api/student/${id}`, { method: 'DELETE', credentials: 'include' });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Record deleted!');
+                        populateDashboard();
+                        populateEditSelect();
+                        editForm.style.display = 'none';
+                    } else {
+                        alert(result.error || 'Failed to delete record');
+                    }
+                } catch (error) {
+                    alert('Network error. Please try again.');
+                    console.error('Delete error:', error);
+                }
+            });
+        })();
+
+        // Initialize
+        populateDashboard();
+
+        // ===== DB MANAGER LOGIC =====
+        const dbTabs = document.querySelectorAll('.db-tab');
+        const dbTableContainers = document.querySelectorAll('.db-table-container');
+
+        // Tab switching
+        dbTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabName = tab.getAttribute('data-tab');
+                
+                dbTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                dbTableContainers.forEach(container => container.style.display = 'none');
+                document.getElementById(tabName).style.display = 'block';
+            });
+        });
+
+        // Add active style to tabs
+        const style = document.createElement('style');
+        style.textContent = `
+            .db-tab { background:#437fb2; color:#0c1821; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; transition:.3s; }
+            .db-tab:hover { background:#324a5f; }
+            .db-tab.active { background:#7badd8; }
+        `;
+        document.head.appendChild(style);
+
+        // Load DB stats
+        async function loadDbStats() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/db-stats`, { credentials: 'include' });
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('stat-students').textContent = result.students;
+                    document.getElementById('stat-teachers').textContent = result.teachers;
+                    document.getElementById('stat-attendance').textContent = result.attendance_records;
+                }
+            } catch (err) {
+                console.error('Error loading DB stats:', err);
+            }
+        }
+
+        // Load students into DB manager
+        async function loadDbStudents() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/students`, { credentials: 'include' });
+                const result = await response.json();
+                if (result.success) {
+                    const tbody = document.getElementById('db-students-tbody');
+                    tbody.innerHTML = '';
+                    result.students.forEach(student => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${student.id}</td>
+                            <td>${student.name}</td>
+                            <td>${student.email}</td>
+                            <td>${student.section || '-'}</td>
+                            <td>${student.created_at ? new Date(student.created_at).toLocaleDateString() : '-'}</td>
+                            <td>
+                                <button onclick="editDbStudent(${student.id}, '${student.name}', '${student.email}', '${student.section || ''}')" style="background:#4caf50; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-right:5px;">Edit</button>
+                                <button onclick="deleteDbStudent(${student.id})" style="background:#f44336; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Delete</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading students:', err);
+            }
+        }
+
+        // Load teachers into DB manager
+        async function loadDbTeachers() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/teachers`, { credentials: 'include' });
+                const result = await response.json();
+                if (result.success) {
+                    const tbody = document.getElementById('db-teachers-tbody');
+                    tbody.innerHTML = '';
+                    result.teachers.forEach(teacher => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${teacher.id}</td>
+                            <td>${teacher.name}</td>
+                            <td>${teacher.email}</td>
+                            <td>${teacher.grade_level || '-'}</td>
+                            <td>${teacher.section || '-'}</td>
+                            <td>${teacher.created_at ? new Date(teacher.created_at).toLocaleDateString() : '-'}</td>
+                            <td>
+                                <button onclick="editDbTeacher(${teacher.id}, '${teacher.name}', '${teacher.email}', '${teacher.grade_level || ''}', '${teacher.section || ''}')" style="background:#4caf50; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-right:5px;">Edit</button>
+                                <button onclick="deleteDbTeacher(${teacher.id})" style="background:#f44336; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Delete</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading teachers:', err);
+            }
+        }
+
+        // Load attendance into DB manager
+        async function loadDbAttendance(dateFilter = null) {
+            try {
+                let url = '/api/attendance';
+                if (dateFilter) url += `?date=${dateFilter}`;
+                const response = await fetch(url, { credentials: 'include' });
+                const result = await response.json();
+                if (result.success) {
+                    const tbody = document.getElementById('db-attendance-tbody');
+                    tbody.innerHTML = '';
+                    if (result.attendance.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No attendance records found</td></tr>';
+                    } else {
+                        result.attendance.forEach(record => {
+                            const row = document.createElement('tr');
+                            const time = new Date(record.timestamp).toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+                            const statusBadge = record.status === 'check_in' ? '<span style="background:#4caf50; color:white; padding:3px 8px; border-radius:4px;">Check In</span>' : '<span style="background:#f44336; color:white; padding:3px 8px; border-radius:4px;">Check Out</span>';
+                            row.innerHTML = `
+                                <td>${record.id}</td>
+                                <td>${record.student_name}</td>
+                                <td>${record.student_email}</td>
+                                <td>${time}</td>
+                                <td>${statusBadge}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading attendance:', err);
+            }
+        }
+
+        // Attendance date filter
+        document.getElementById('attendance-filter-btn').addEventListener('click', () => {
+            const dateInput = document.getElementById('attendance-date-filter').value;
+            loadDbAttendance(dateInput);
+        });
+
+        // Edit DB Student
+        window.editDbStudent = function(id, name, email, section) {
+            const newName = prompt('Edit name:', name);
+            if (newName === null) return;
+            const newEmail = prompt('Edit email:', email);
+            if (newEmail === null) return;
+            const newSection = prompt('Edit section:', section);
+            if (newSection === null) return;
+
+            fetch(`/api/student/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newName,
+                    email: newEmail,
+                    section: newSection
+                })
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    alert('Student updated!');
+                    loadDbStudents();
+                } else {
+                    alert(result.error || 'Failed to update');
+                }
+            }).catch(err => alert('Error: ' + err));
+        };
+
+        // Delete DB Student
+        window.deleteDbStudent = function(id) {
+            if (!confirm('Are you sure you want to delete this student?')) return;
+            fetch(`/api/student/${id}`, { method: 'DELETE' })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('Student deleted!');
+                        loadDbStudents();
+                        loadDbStats();
+                    } else {
+                        alert(result.error || 'Failed to delete');
+                    }
+                }).catch(err => alert('Error: ' + err));
+        };
+
+        // Edit DB Teacher
+        window.editDbTeacher = function(id, name, email, gradeLevel, section) {
+            const newName = prompt('Edit name:', name);
+            if (newName === null) return;
+            const newEmail = prompt('Edit email:', email);
+            if (newEmail === null) return;
+            const newGradeLevel = prompt('Edit grade level (11 or 12):', gradeLevel);
+            if (newGradeLevel === null) return;
+            const newSection = prompt('Edit section:', section);
+            if (newSection === null) return;
+
+            fetch(`/api/teacher/${id}`, {
+                method: 'PUT',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newName,
+                    email: newEmail,
+                    grade_level: newGradeLevel,
+                    section: newSection
+                })
+            }).then(r => r.json()).then(result => {
+                if (result.success) {
+                    alert('Teacher updated!');
+                    loadDbTeachers();
+                } else {
+                    alert(result.error || 'Failed to update');
+                }
+            }).catch(err => alert('Error: ' + err));
+        };
+
+        // Delete DB Teacher
+        window.deleteDbTeacher = function(id) {
+            if (!confirm('Are you sure you want to delete this teacher?')) return;
+            fetch(`/api/teacher/${id}`, { method: 'DELETE', credentials: 'include' })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('Teacher deleted!');
+                        loadDbTeachers();
+                        loadDbStats();
+                    } else {
+                        alert(result.error || 'Failed to delete');
+                    }
+                }).catch(err => alert('Error: ' + err));
+        };
+
+        // Load all DB data on page init
+        loadDbStats();
+        loadDbStudents();
+        loadDbTeachers();
+        loadDbAttendance();
+        
+        // Load attendance stats, student stats and config
+        loadAttendanceStats();
+        loadStudentStats();
+        loadTimeConfig();
+        
+        // Refresh DB data every 30 seconds
+        setInterval(() => {
+            loadDbStats();
+            loadDbStudents();
+            loadDbTeachers();
+            loadAttendanceStats();
+            loadStudentStats();
+        }, 30000);
+
+        // ==================== ATTENDANCE STATS ====================
+        async function loadAttendanceStats() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/admin/dashboard-stats`, { credentials: 'include' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    const stats = result.stats;
+                    
+                    // Update summary cards
+                    document.getElementById('total-students').textContent = stats.total_students;
+                    document.getElementById('total-present').textContent = stats.present;
+                    document.getElementById('total-absent').textContent = stats.absent;
+                    document.getElementById('total-late').textContent = stats.late;
+                    document.getElementById('total-cutting').textContent = stats.cutting;
+                    document.getElementById('total-excused').textContent = stats.excused || 0;
+                    
+                    // Render bar chart
+                    renderStatusChart(stats);
+                    
+                    // Populate section breakdown table
+                    const tbody = document.getElementById('section-stats-tbody');
+                    tbody.innerHTML = '';
+                    
+                    for (const [section, sectionStats] of Object.entries(stats.by_section)) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${section}</td>
+                            <td>${sectionStats.total}</td>
+                            <td style="color: green; font-weight: bold;">${sectionStats.present}</td>
+                            <td style="color: red; font-weight: bold;">${sectionStats.absent}</td>
+                            <td style="color: orange; font-weight: bold;">${sectionStats.late}</td>
+                            <td style="color: #e53e3e; font-weight: bold;">${sectionStats.cutting}</td>
+                        `;
+                        tbody.appendChild(row);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading attendance stats:', error);
+            }
+        }
+
+        function renderStatusChart(stats) {
+            const chartContainer = document.getElementById('status-chart');
+            const total = stats.total_students || 1; // Prevent divide by zero
+            
+            const presentPercent = (stats.present / total) * 100;
+            const absentPercent = (stats.absent / total) * 100;
+            const latePercent = (stats.late / total) * 100;
+            const cuttingPercent = (stats.cutting / total) * 100;
+            const excusedPercent = (stats.excused / total) * 100;
+            
+            chartContainer.innerHTML = `
+                <div class="bar-row">
+                    <span class="bar-label">Present</span>
+                    <div class="bar-container">
+                        <div class="bar bar-present" style="width: ${presentPercent}%"></div>
+                    </div>
+                    <span class="bar-value">${stats.present} (${presentPercent.toFixed(1)}%)</span>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-label">Absent</span>
+                    <div class="bar-container">
+                        <div class="bar bar-absent" style="width: ${absentPercent}%"></div>
+                    </div>
+                    <span class="bar-value">${stats.absent} (${absentPercent.toFixed(1)}%)</span>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-label">Late</span>
+                    <div class="bar-container">
+                        <div class="bar bar-late" style="width: ${latePercent}%"></div>
+                    </div>
+                    <span class="bar-value">${stats.late} (${latePercent.toFixed(1)}%)</span>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-label">Cutting</span>
+                    <div class="bar-container">
+                        <div class="bar bar-cutting" style="width: ${cuttingPercent}%"></div>
+                    </div>
+                    <span class="bar-value">${stats.cutting} (${cuttingPercent.toFixed(1)}%)</span>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-label">Excused</span>
+                    <div class="bar-container">
+                        <div class="bar bar-excused" style="width: ${excusedPercent}%"></div>
+                    </div>
+                    <span class="bar-value">${stats.excused || 0} (${excusedPercent.toFixed(1)}%)</span>
+                </div>
+            `;
+        }
+
+        // Auto-mark button
+        document.getElementById('auto-mark-btn').addEventListener('click', async () => {
+            if (!confirm('This will mark students as ABSENT (if not checked in) or CUTTING (if not checked out). Continue?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/attendance/auto-mark`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Auto-mark complete!\n\nMarked ${result.marked_absent} students as ABSENT\nMarked ${result.marked_cutting} students as CUTTING`);
+                    loadAttendanceStats();
+                } else {
+                    alert(result.error || 'Failed to run auto-mark');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+                console.error('Auto-mark error:', error);
+            }
+        });
+
+        // ==================== STUDENT STATISTICS ====================
+        async function loadStudentStats(start=null, end=null) {
+            try {
+                const params = new URLSearchParams();
+                if (start) params.append('start', start);
+                if (end) params.append('end', end);
+                const url = '/api/admin/student-stats' + (params.toString() ? `?${params.toString()}` : '');
+                const response = await fetch(url, { credentials: 'include' });
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('stats-start').value = result.start;
+                    document.getElementById('stats-end').value = result.end;
+                    renderStudentStatsTable(result.students);
+                } else {
+                    alert(result.error || 'Failed to load student statistics');
+                }
+            } catch (err) {
+                console.error('Error loading student stats:', err);
+            }
+        }
+
+        function renderStudentStatsTable(students) {
+            const tbody = document.getElementById('student-stats-tbody');
+            tbody.innerHTML = '';
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px;">No records found</td></tr>';
+                return;
+            }
+
+            students.forEach(s => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${s.student_id}</td>
+                    <td>${s.name}</td>
+                    <td>${s.email}</td>
+                    <td>${s.teacher_name || '-'}</td>
+                    <td>${s.section || '-'}</td>
+                    <td style="color:green;">${s.present}</td>
+                    <td style="color:red;">${s.absent}</td>
+                    <td style="color:orange;">${s.late}</td>
+                    <td style="color:#e53e3e;">${s.cutting}</td>
+                    <td>${s.attendance_percentage !== null ? s.attendance_percentage + '%' : '-'}</td>
+                    <td>${s.last_checkin ? new Date(s.last_checkin).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        document.getElementById('stats-filter-btn').addEventListener('click', () => {
+            const start = document.getElementById('stats-start').value || null;
+            const end = document.getElementById('stats-end').value || null;
+            loadStudentStats(start, end);
+        });
+
+        document.getElementById('stats-print-btn').addEventListener('click', () => {
+            const table = document.querySelector('#student-stats .table-wrapper').innerHTML;
+            const title = `Student Statistics (${document.getElementById('stats-start').value} to ${document.getElementById('stats-end').value})`;
+            const w = window.open('', '_blank');
+            if (!w) { alert('Pop-up blocked. Please allow pop-ups to print.'); return; }
+            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}</style></head><body><h2>${title}</h2>${table}</body></html>`);
+            w.document.close();
+            w.focus();
+            w.print();
+        });
+        document.getElementById('stats-csv-btn').addEventListener('click', () => {
+            const start = document.getElementById('stats-start').value || '';
+            const end = document.getElementById('stats-end').value || '';
+            const url = `/api/admin/student-stats.csv?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+            window.location.href = url;
+        });
+
+        document.getElementById('stats-pdf-btn').addEventListener('click', async () => {
+            const start = document.getElementById('stats-start').value || '';
+            const end = document.getElementById('stats-end').value || '';
+            const url = `/api/admin/student-stats.pdf?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+            // Try to download; if server returns JSON error, show alert
+            try {
+                const res = await fetch(url, { credentials: 'include' });
+                if (res.headers.get('content-type') && res.headers.get('content-type').includes('application/pdf')) {
+                    const blob = await res.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `student-stats-${start}_to_${end}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Failed to generate PDF');
+                }
+            } catch (err) {
+                alert('Network error generating PDF');
+            }
+        });
+
+        // ===== Attendance export/print handlers =====
+        document.getElementById('attendance-csv-btn').addEventListener('click', () => {
+            const url = '/api/admin/dashboard-stats.csv';
+            window.location.href = url;
+        });
+
+        document.getElementById('attendance-pdf-btn').addEventListener('click', async () => {
+            const url = '/api/admin/dashboard-stats.pdf';
+            try {
+                const res = await fetch(url, { credentials: 'include' });
+                if (res.headers.get('content-type') && res.headers.get('content-type').includes('application/pdf')) {
+                    const blob = await res.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `attendance-summary.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Failed to generate PDF');
+                }
+            } catch (err) {
+                alert('Network error generating PDF');
+            }
+        });
+
+        document.getElementById('attendance-print-btn').addEventListener('click', async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/api/admin/dashboard-stats`, { credentials: 'include' });
+                const data = await res.json();
+                if (!data.success) { alert(data.error || 'Failed to load attendance stats'); return; }
+                const stats = data.stats;
+                const title = `Attendance Summary - ${data.date}`;
+                let html = `<h2>${title}</h2>`;
+                html += `<h3>Summary</h3><table style="width:100%;border-collapse:collapse;">`;
+                html += `<tr><th style="border:1px solid #ddd;padding:6px">Metric</th><th style="border:1px solid #ddd;padding:6px">Value</th></tr>`;
+                html += `<tr><td style="border:1px solid #ddd;padding:6px">Total Students</td><td style="border:1px solid #ddd;padding:6px">${stats.total_students}</td></tr>`;
+                html += `<tr><td style="border:1px solid #ddd;padding:6px">Present</td><td style="border:1px solid #ddd;padding:6px">${stats.present}</td></tr>`;
+                html += `<tr><td style="border:1px solid #ddd;padding:6px">Absent</td><td style="border:1px solid #ddd;padding:6px">${stats.absent}</td></tr>`;
+                html += `<tr><td style="border:1px solid #ddd;padding:6px">Late</td><td style="border:1px solid #ddd;padding:6px">${stats.late}</td></tr>`;
+                html += `<tr><td style="border:1px solid #ddd;padding:6px">Cutting</td><td style="border:1px solid #ddd;padding:6px">${stats.cutting}</td></tr>`;
+                html += `</table><h3 style="margin-top:16px">By Section</h3>`;
+                html += `<table style="width:100%;border-collapse:collapse;"><tr><th style="border:1px solid #ddd;padding:6px">Section</th><th style="border:1px solid #ddd;padding:6px">Total</th><th style="border:1px solid #ddd;padding:6px">Present</th><th style="border:1px solid #ddd;padding:6px">Absent</th><th style="border:1px solid #ddd;padding:6px">Late</th><th style="border:1px solid #ddd;padding:6px">Cutting</th></tr>`;
+                for (const [section, s] of Object.entries(stats.by_section)) {
+                    html += `<tr><td style="border:1px solid #ddd;padding:6px">${section}</td><td style="border:1px solid #ddd;padding:6px">${s.total}</td><td style="border:1px solid #ddd;padding:6px">${s.present}</td><td style="border:1px solid #ddd;padding:6px">${s.absent}</td><td style="border:1px solid #ddd;padding:6px">${s.late}</td><td style="border:1px solid #ddd;padding:6px">${s.cutting}</td></tr>`;
+                }
+                html += `</table>`;
+
+                const w = window.open('', '_blank');
+                if (!w) { alert('Pop-up blocked. Please allow pop-ups to print.'); return; }
+                w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}</style></head><body>${html}</body></html>`);
+                w.document.close();
+                w.focus();
+                w.print();
+            } catch (err) {
+                alert('Failed to load attendance stats for printing');
+            }
+        });
+
+        // ==================== TIME CONFIGURATION ====================
+        async function loadTimeConfig() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/admin/config`, { credentials: 'include' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    const config = result.config;
+                    
+                    // Set time inputs
+                    document.getElementById('check-in-start').value = config.check_in_start_time;
+                    document.getElementById('check-in-end').value = config.check_in_end_time;
+                    document.getElementById('check-out-start').value = config.check_out_start_time;
+                    document.getElementById('check-out-end').value = config.check_out_end_time;
+                    
+                    // Set checkboxes
+                    document.getElementById('auto-absent').checked = config.auto_mark_absent_enabled;
+                    document.getElementById('auto-cutting').checked = config.auto_mark_cutting_enabled;
+                    document.getElementById('email-enabled').checked = config.email_notifications_enabled;
+                    document.getElementById('notify-present').checked = config.notify_on_present;
+                    document.getElementById('notify-absent').checked = config.notify_on_absent;
+                    document.getElementById('notify-late').checked = config.notify_on_late;
+                    document.getElementById('notify-cutting').checked = config.notify_on_cutting;
+                    
+                    // Set SMTP email settings
+                    document.getElementById('smtp-email').value = config.smtp_email || '';
+                    document.getElementById('smtp-password').value = config.smtp_password || '';
+                    document.getElementById('smtp-server').value = config.smtp_server || 'smtp.gmail.com';
+                    document.getElementById('smtp-port').value = config.smtp_port || 587;
+                }
+            } catch (error) {
+                console.error('Error loading time config:', error);
+            }
+        }
+
+        // Time config form submission
+        document.getElementById('time-config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const config = {
+                check_in_start_time: document.getElementById('check-in-start').value,
+                check_in_end_time: document.getElementById('check-in-end').value,
+                check_out_start_time: document.getElementById('check-out-start').value,
+                check_out_end_time: document.getElementById('check-out-end').value,
+                auto_mark_absent_enabled: document.getElementById('auto-absent').checked,
+                auto_mark_cutting_enabled: document.getElementById('auto-cutting').checked,
+                email_notifications_enabled: document.getElementById('email-enabled').checked,
+                notify_on_present: document.getElementById('notify-present').checked,
+                notify_on_absent: document.getElementById('notify-absent').checked,
+                notify_on_late: document.getElementById('notify-late').checked,
+                notify_on_cutting: document.getElementById('notify-cutting').checked,
+                smtp_email: document.getElementById('smtp-email').value,
+                smtp_password: document.getElementById('smtp-password').value,
+                smtp_server: document.getElementById('smtp-server').value,
+                smtp_port: document.getElementById('smtp-port').value
+            };
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/admin/config`, {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Configuration saved successfully!');
+                } else {
+                    alert(result.error || 'Failed to save configuration');
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+                console.error('Save config error:', error);
+            }
+        });
+        
+        // Test email button
+        document.getElementById('test-email-btn').addEventListener('click', async () => {
+            const testEmail = prompt('Enter email address to send test email:', 'your-email@gmail.com');
+            if (!testEmail) return;
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/admin/test-email`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test_email: testEmail })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✓ ' + result.message);
+                } else {
+                    alert('✗ ' + (result.error || 'Failed to send test email'));
+                }
+            } catch (error) {
+                alert('Network error. Please try again.');
+                console.error('Test email error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
