@@ -91,26 +91,24 @@ else:
 QR_SIGNING_SECRET = os.environ.get('QR_SIGNING_SECRET', app.secret_key)
 QR_SIGNER = URLSafeTimedSerializer(QR_SIGNING_SECRET)
 
-# One-time login tokens for mobile redirect (token -> {user_type, user_id, redirect, expires})
-_login_tokens = {}
-
-import uuid as _uuid
+# Signer for one-time login redirect tokens (works across gunicorn workers)
+_AUTH_SIGNER = URLSafeTimedSerializer(app.secret_key, salt='auth-redirect')
 
 def _create_login_token(user_type, user_id, redirect_url):
-    """Create a short-lived one-time token for mobile auth redirect."""
-    token = _uuid.uuid4().hex
-    _login_tokens[token] = {
+    """Create a cryptographically signed short-lived token for mobile auth redirect.
+    Uses itsdangerous so the token is stateless and works across multiple workers."""
+    return _AUTH_SIGNER.dumps({
         'user_type': user_type,
         'user_id': user_id,
         'redirect': redirect_url,
-        'expires': datetime.utcnow() + timedelta(minutes=2)
-    }
-    # Cleanup expired tokens
-    now = datetime.utcnow()
-    expired = [k for k, v in _login_tokens.items() if v['expires'] < now]
-    for k in expired:
-        _login_tokens.pop(k, None)
-    return token
+    })
+
+def _verify_login_token(token, max_age=120):
+    """Verify and decode a login redirect token. Returns data dict or None."""
+    try:
+        return _AUTH_SIGNER.loads(token, max_age=max_age)
+    except Exception:
+        return None
 
 # Admin bootstrap password (do NOT hard-code in production). Set in env:
 # ADMIN_BOOTSTRAP_PASSWORD (defaults to 'system123' for legacy compatibility).
@@ -157,7 +155,7 @@ _is_production = bool(os.environ.get('DATABASE_URL') or os.environ.get('RAILWAY_
 # For mobile app: Always use SameSite=None with Secure=True (required for cross-origin cookies)
 # This works for both web browser and mobile app access
 app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', 'None')
-app.config['SESSION_COOKIE_SECURE'] = True  # Required when SameSite=None
+app.config['SESSION_COOKIE_SECURE'] = _is_production  # Only True in production (HTTPS); False locally
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_DOMAIN'] = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 
@@ -756,17 +754,16 @@ def auth_redirect():
     """One-time token auth redirect for mobile WebView.
     
     Mobile WebViews often don't share cookies between fetch() and page navigation.
-    This endpoint accepts a one-time token, logs the user in via a full page load
-    (which properly sets cookies), and redirects to the target page.
+    This endpoint accepts a signed token, logs the user in via a full page load
+    (which properly sets cookies), and uses a JS redirect instead of 302 to
+    ensure the cookie is written before navigating away.
     """
     token = request.args.get('token')
-    if not token or token not in _login_tokens:
+    if not token:
         return redirect('/')
     
-    token_data = _login_tokens.pop(token)  # One-time use
-    
-    # Check expiry
-    if datetime.utcnow() > token_data['expires']:
+    token_data = _verify_login_token(token)
+    if not token_data:
         return redirect('/')
     
     user_type = token_data['user_type']
@@ -774,17 +771,18 @@ def auth_redirect():
     redirect_url = token_data['redirect']
     
     # Log the user in
+    user = None
     if user_type == 'teacher':
-        user = Teacher.query.get(user_id)
+        user = db.session.get(Teacher, user_id)
         if user:
-            login_user(user)
+            login_user(user, remember=True)
             session['user_type'] = 'teacher'
             session.permanent = True
             session.modified = True
     elif user_type == 'student':
-        user = Student.query.get(user_id)
+        user = db.session.get(Student, user_id)
         if user:
-            login_user(user)
+            login_user(user, remember=True)
             session['user_type'] = 'student'
             session['logged_in'] = True
             session['student_id'] = user.id
@@ -803,7 +801,20 @@ def auth_redirect():
             session.permanent = True
             session.modified = True
     
-    return redirect(redirect_url)
+    if not user:
+        return redirect('/')
+    
+    # Use an HTML page with JS redirect instead of 302.
+    # This ensures the Set-Cookie header from THIS response is written to the
+    # browser cookie store BEFORE the navigation happens. A 302 redirect can
+    # race the cookie write in some WebViews.
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Redirecting...</title></head>
+<body>
+<p>Logging in, please wait...</p>
+<script>window.location.replace("{redirect_url}");</script>
+<noscript><meta http-equiv="refresh" content="0;url={redirect_url}"></noscript>
+</body></html>''', 200
 
 
 @app.route('/accountcreate.html')
