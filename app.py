@@ -839,16 +839,19 @@ def teacher():
     return send_file('teacher.html')
 
 @app.route('/student.html')
+@login_required
 def student():
-    # Allow session-based student authentication
+    # Use @login_required for consistent auth (supports both session and remember cookies)
+    print(f"[STUDENT PAGE] current_user: {current_user}, authenticated: {current_user.is_authenticated}")
     print(f"[STUDENT PAGE] session keys: {list(session.keys())}")
-    print(f"[STUDENT PAGE] logged_in: {session.get('logged_in')}, user_type: {session.get('user_type')}")
-    print(f"[STUDENT PAGE] request.is_secure: {request.is_secure}, scheme: {request.scheme}")
-    print(f"[STUDENT PAGE] cookies received: {list(request.cookies.keys())}")
-    if session.get('logged_in') and session.get('user_type') == 'student':
-        return send_file('student.html')
-    print(f"[STUDENT PAGE] Redirecting - not logged in as student")
-    return redirect('/')
+    if not isinstance(current_user, Student):
+        print(f"[STUDENT PAGE] Redirecting - not logged in as student")
+        return redirect('/')
+    # Ensure session flags are set for any student-page JS that reads them
+    session['logged_in'] = True
+    session['user_type'] = 'student'
+    session['student_id'] = current_user.id
+    return send_file('student.html')
 
 @app.route('/api/signup', methods=['POST'])
 def signup():
