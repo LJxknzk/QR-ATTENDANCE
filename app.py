@@ -2873,26 +2873,52 @@ def get_current_student_qr():
         db_name = session.get('student_db')
         student_id = session.get('student_id')
         
-        Session = get_teacher_db_session(db_name)
-        sess = Session()
-        try:
-            student = sess.get(TeacherStudent, student_id)
-            if not student:
-                return jsonify({'success': False, 'error': 'Student not found'}), 404
-            
-            if not student.qr_code:
-                student.generate_qr_code()
-                sess.commit()
-            
-            import base64
-            qr_base64 = base64.b64encode(student.qr_code).decode('utf-8')
-            
-            return jsonify({
-                'success': True,
-                'qr_image': f'data:image/png;base64,{qr_base64}'
-            }), 200
-        finally:
-            sess.close()
+        import base64
+        
+        # Try teacher-specific DB first
+        if db_name and student_id:
+            try:
+                Session = get_teacher_db_session(db_name)
+                sess = Session()
+                try:
+                    student = sess.get(TeacherStudent, student_id)
+                    if student:
+                        if not student.qr_code:
+                            student.generate_qr_code()
+                            sess.commit()
+                        
+                        qr_base64 = base64.b64encode(student.qr_code).decode('utf-8')
+                        return jsonify({
+                            'success': True,
+                            'qr_image': f'data:image/png;base64,{qr_base64}'
+                        }), 200
+                finally:
+                    sess.close()
+            except Exception as e:
+                print(f"[QR-IMAGE] Teacher DB lookup failed: {e}")
+        
+        # Fallback: use the main Student table
+        if not student_id:
+            return jsonify({'success': False, 'error': 'Session invalid - no student ID'}), 403
+        
+        main_student = None
+        if current_user and current_user.is_authenticated and isinstance(current_user, Student):
+            main_student = current_user
+        else:
+            main_student = db.session.get(Student, student_id)
+        
+        if not main_student:
+            return jsonify({'success': False, 'error': 'Student not found'}), 404
+        
+        if not main_student.qr_code:
+            main_student.generate_qr_code()
+            db.session.commit()
+        
+        qr_base64 = base64.b64encode(main_student.qr_code).decode('utf-8')
+        return jsonify({
+            'success': True,
+            'qr_image': f'data:image/png;base64,{qr_base64}'
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -2907,27 +2933,54 @@ def download_current_student_qr():
         db_name = session.get('student_db')
         student_id = session.get('student_id')
         
-        Session = get_teacher_db_session(db_name)
-        sess = Session()
-        try:
-            student = sess.get(TeacherStudent, student_id)
-            if not student:
-                return jsonify({'success': False, 'error': 'Student not found'}), 404
-            
-            if not student.qr_code:
-                student.generate_qr_code()
-                sess.commit()
-            
-            from flask import send_file
-            import io
-            return send_file(
-                io.BytesIO(student.qr_code),
-                mimetype='image/png',
-                as_attachment=True,
-                download_name=f'qr_code_{student.email}.png'
-            )
-        finally:
-            sess.close()
+        import io
+        
+        # Try teacher-specific DB first
+        if db_name and student_id:
+            try:
+                Session = get_teacher_db_session(db_name)
+                sess = Session()
+                try:
+                    student = sess.get(TeacherStudent, student_id)
+                    if student:
+                        if not student.qr_code:
+                            student.generate_qr_code()
+                            sess.commit()
+                        
+                        return send_file(
+                            io.BytesIO(student.qr_code),
+                            mimetype='image/png',
+                            as_attachment=True,
+                            download_name=f'qr_code_{student.email}.png'
+                        )
+                finally:
+                    sess.close()
+            except Exception as e:
+                print(f"[QR-CODE] Teacher DB lookup failed: {e}")
+        
+        # Fallback: use the main Student table
+        if not student_id:
+            return jsonify({'success': False, 'error': 'Session invalid - no student ID'}), 403
+        
+        main_student = None
+        if current_user and current_user.is_authenticated and isinstance(current_user, Student):
+            main_student = current_user
+        else:
+            main_student = db.session.get(Student, student_id)
+        
+        if not main_student:
+            return jsonify({'success': False, 'error': 'Student not found'}), 404
+        
+        if not main_student.qr_code:
+            main_student.generate_qr_code()
+            db.session.commit()
+        
+        return send_file(
+            io.BytesIO(main_student.qr_code),
+            mimetype='image/png',
+            as_attachment=True,
+            download_name=f'qr_code_{main_student.email}.png'
+        )
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
