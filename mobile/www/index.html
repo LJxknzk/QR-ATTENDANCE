@@ -228,7 +228,12 @@ window.addEventListener('resize', () => {
 
       if (result.success) {
         alert('Login successful! Redirecting...');
-        window.location.href = result.redirect;
+        // Use auth-redirect for reliable session establishment (fixes mobile WebView)
+        if (result.auth_token) {
+          window.location.href = '/auth-redirect?token=' + result.auth_token;
+        } else {
+          window.location.href = result.redirect;
+        }
       } else {
         alert(result.error || 'Login failed');
       }

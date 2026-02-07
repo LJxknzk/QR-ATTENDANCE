@@ -91,6 +91,27 @@ else:
 QR_SIGNING_SECRET = os.environ.get('QR_SIGNING_SECRET', app.secret_key)
 QR_SIGNER = URLSafeTimedSerializer(QR_SIGNING_SECRET)
 
+# One-time login tokens for mobile redirect (token -> {user_type, user_id, redirect, expires})
+_login_tokens = {}
+
+import uuid as _uuid
+
+def _create_login_token(user_type, user_id, redirect_url):
+    """Create a short-lived one-time token for mobile auth redirect."""
+    token = _uuid.uuid4().hex
+    _login_tokens[token] = {
+        'user_type': user_type,
+        'user_id': user_id,
+        'redirect': redirect_url,
+        'expires': datetime.utcnow() + timedelta(minutes=2)
+    }
+    # Cleanup expired tokens
+    now = datetime.utcnow()
+    expired = [k for k, v in _login_tokens.items() if v['expires'] < now]
+    for k in expired:
+        _login_tokens.pop(k, None)
+    return token
+
 # Admin bootstrap password (do NOT hard-code in production). Set in env:
 # ADMIN_BOOTSTRAP_PASSWORD (defaults to 'system123' for legacy compatibility).
 ADMIN_BOOTSTRAP_PASSWORD = os.environ.get('ADMIN_BOOTSTRAP_PASSWORD', 'system123')
@@ -730,6 +751,61 @@ def admin_config_api():
     return jsonify({'success': True, 'message': 'Admin config updated'}), 200
 
 
+@app.route('/auth-redirect')
+def auth_redirect():
+    """One-time token auth redirect for mobile WebView.
+    
+    Mobile WebViews often don't share cookies between fetch() and page navigation.
+    This endpoint accepts a one-time token, logs the user in via a full page load
+    (which properly sets cookies), and redirects to the target page.
+    """
+    token = request.args.get('token')
+    if not token or token not in _login_tokens:
+        return redirect('/')
+    
+    token_data = _login_tokens.pop(token)  # One-time use
+    
+    # Check expiry
+    if datetime.utcnow() > token_data['expires']:
+        return redirect('/')
+    
+    user_type = token_data['user_type']
+    user_id = token_data['user_id']
+    redirect_url = token_data['redirect']
+    
+    # Log the user in
+    if user_type == 'teacher':
+        user = Teacher.query.get(user_id)
+        if user:
+            login_user(user)
+            session['user_type'] = 'teacher'
+            session.permanent = True
+            session.modified = True
+    elif user_type == 'student':
+        user = Student.query.get(user_id)
+        if user:
+            login_user(user)
+            session['user_type'] = 'student'
+            session['logged_in'] = True
+            session['student_id'] = user.id
+            # Resolve teacher DB
+            session['student_db'] = None
+            try:
+                t = db.session.get(Teacher, user.teacher_id) if user.teacher_id else None
+                if t and t.db_name:
+                    session['student_db'] = t.db_name
+                else:
+                    fb = Teacher.query.filter_by(section=user.section, grade_level=user.grade_level).first()
+                    if fb and fb.db_name:
+                        session['student_db'] = fb.db_name
+            except Exception:
+                pass
+            session.permanent = True
+            session.modified = True
+    
+    return redirect(redirect_url)
+
+
 @app.route('/accountcreate.html')
 def accountcreate():
     return send_file('accountcreate.html')
@@ -1087,10 +1163,12 @@ def login():
             session.permanent = True
             session.modified = True
             print(f"[LOGIN] Origin: {request.headers.get('Origin')}")
+            auth_token = _create_login_token('teacher', admin_teacher.id, '/admin.html')
             return jsonify({
                 'success': True,
                 'message': 'Login successful',
                 'redirect': '/admin.html',
+                'auth_token': auth_token,
                 'user_type': 'teacher'
             }), 200
 
@@ -1111,10 +1189,12 @@ def login():
                     redirect_url = '/admin.html'
                 else:
                     redirect_url = '/teacher.html'
+                auth_token = _create_login_token('teacher', teacher.id, redirect_url)
                 return jsonify({
                     'success': True,
                     'message': 'Login successful',
                     'redirect': redirect_url,
+                    'auth_token': auth_token,
                     'user_type': 'teacher'
                 }), 200
             else:
@@ -1187,10 +1267,12 @@ def login():
                 print(f"[LOGIN] Origin: {request.headers.get('Origin')}")
                 print(f"[LOGIN] Student {email} logged in. Authenticated: {student.is_authenticated}")
                 print(f"[LOGIN] Session keys after login: {list(session.keys())}")
+                auth_token = _create_login_token('student', student.id, '/student.html')
                 return jsonify({
                     'success': True,
                     'message': 'Login successful',
                     'redirect': '/student.html',
+                    'auth_token': auth_token,
                     'user_type': 'student'
                 }), 200
             else:
@@ -2818,6 +2900,7 @@ def launch_scanner():
             threading.Thread(target=run_scanner, daemon=True).start()
 
         return jsonify({
+
             'success': True,
             'message': 'Desktop scanner launched successfully!'
         }), 200
