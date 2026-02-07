@@ -316,4 +316,4 @@ def init_db_manager(app):
                 print(f"  - {db_info['db_name']}")
         else:
             print("✓ No teacher databases found yet (will be created when teachers are added)")
-                return True
+        return True
