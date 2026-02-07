@@ -115,7 +115,13 @@
                     showError('Session expired. Please log in again.');
                     setTimeout(() => window.location.href = '/', 2000);
                 } else {
-                    showError('Failed to load student information');
+                    // Try to read the actual error from the server
+                    try {
+                        const errResult = await response.json();
+                        showError(errResult.error || 'Failed to load student information');
+                    } catch (_) {
+                        showError('Failed to load student information');
+                    }
                 }
             } catch (error) {
                 console.error('Error getting student info:', error);

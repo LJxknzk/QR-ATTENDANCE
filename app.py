@@ -788,16 +788,48 @@ def auth_redirect():
             session['student_id'] = user.id
             # Resolve teacher DB
             session['student_db'] = None
+            resolved_teacher = None
             try:
                 t = db.session.get(Teacher, user.teacher_id) if user.teacher_id else None
                 if t and t.db_name:
                     session['student_db'] = t.db_name
+                    resolved_teacher = t
                 else:
                     fb = Teacher.query.filter_by(section=user.section, grade_level=user.grade_level).first()
                     if fb and fb.db_name:
                         session['student_db'] = fb.db_name
+                        resolved_teacher = fb
             except Exception:
                 pass
+
+            # Map student_id to the teacher-specific DB entry (same as /api/login)
+            try:
+                db_name = session.get('student_db')
+                if db_name:
+                    Session_cls = get_teacher_db_session(db_name)
+                    tsess = Session_cls()
+                    try:
+                        teacher_student = tsess.query(TeacherStudent).filter_by(email=user.email).first()
+                        if teacher_student:
+                            session['student_id'] = teacher_student.id
+                        else:
+                            new_ts = TeacherStudent(
+                                full_name=user.full_name,
+                                email=user.email,
+                                password_hash=user.password_hash,
+                                section=user.section or '',
+                                grade_level=user.grade_level or '',
+                                teacher_id=(resolved_teacher.id if resolved_teacher else None),
+                                created_at=user.created_at
+                            )
+                            tsess.add(new_ts)
+                            tsess.commit()
+                            session['student_id'] = new_ts.id
+                    finally:
+                        tsess.close()
+            except Exception:
+                pass
+
             session.permanent = True
             session.modified = True
     
@@ -2695,31 +2727,62 @@ def get_current_student():
         db_name = session.get('student_db')
         student_id = session.get('student_id')
         
-        if not db_name or not student_id:
-            return jsonify({'success': False, 'error': 'Session invalid'}), 403
+        # Try teacher-specific DB first
+        if db_name and student_id:
+            try:
+                Session = get_teacher_db_session(db_name)
+                sess = Session()
+                try:
+                    student = sess.get(TeacherStudent, student_id)
+                    if student:
+                        return jsonify({
+                            'success': True,
+                            'student_id': student.id,
+                            'student': {
+                                'id': student.id,
+                                'full_name': student.full_name,
+                                'email': student.email,
+                                'section': student.section,
+                                'grade_level': student.grade_level,
+                                'teacher_id': student.teacher_id,
+                                'created_at': student.created_at.isoformat() if student.created_at else None
+                            }
+                        }), 200
+                finally:
+                    sess.close()
+            except Exception as e:
+                print(f"[STUDENT/CURRENT] Teacher DB lookup failed: {e}")
         
-        Session = get_teacher_db_session(db_name)
-        sess = Session()
-        try:
-            student = sess.get(TeacherStudent, student_id)
-            if not student:
-                return jsonify({'success': False, 'error': 'Student not found'}), 404
-            
-            return jsonify({
-                'success': True,
-                'student_id': student.id,
-                'student': {
-                    'id': student.id,
-                    'full_name': student.full_name,
-                    'email': student.email,
-                    'section': student.section,
-                    'grade_level': student.grade_level,
-                    'teacher_id': student.teacher_id,
-                    'created_at': student.created_at.isoformat() if student.created_at else None
-                }
-            }), 200
-        finally:
-            sess.close()
+        # Fallback: use the main Student table (handles cases where student_db
+        # is not set or the teacher DB lookup failed)
+        if not student_id:
+            return jsonify({'success': False, 'error': 'Session invalid - no student ID'}), 403
+        
+        # Try to find student by Flask-Login current_user first, then by session id
+        main_student = None
+        if current_user and current_user.is_authenticated and isinstance(current_user, Student):
+            main_student = current_user
+        else:
+            main_student = db.session.get(Student, student_id)
+        
+        if not main_student:
+            # Last resort: the student_id in session may be a teacher-DB id;
+            # look up via Flask-Login's stored user id
+            return jsonify({'success': False, 'error': 'Student not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'student_id': main_student.id,
+            'student': {
+                'id': main_student.id,
+                'full_name': main_student.full_name,
+                'email': main_student.email,
+                'section': main_student.section,
+                'grade_level': main_student.grade_level,
+                'teacher_id': main_student.teacher_id,
+                'created_at': main_student.created_at.isoformat() if main_student.created_at else None
+            }
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
