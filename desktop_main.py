@@ -90,6 +90,22 @@ class QRAttendanceApp(QMainWindow):
     def start_flask_server(self):
         """Start Flask server in background thread"""
         try:
+            # Set DATABASE_URL if configured (for PostgreSQL)
+            database_url = self.config.get('database_url', '')
+            if database_url and not database_url.startswith('postgresql://postgres:YOUR_'):
+                os.environ['DATABASE_URL'] = database_url
+                print(f"✓ Using PostgreSQL database")
+            else:
+                # Clear any existing DATABASE_URL to use SQLite
+                os.environ.pop('DATABASE_URL', None)
+                print(f"✓ Using local SQLite database")
+            
+            # Re-import app to pick up new DATABASE_URL
+            import importlib
+            import app as app_module
+            importlib.reload(app_module)
+            from app import app as flask_app_reloaded, db as db_reloaded
+            
             # Extract port from server URL
             port = 5000
             if ':' in self.server_url:
@@ -99,14 +115,14 @@ class QRAttendanceApp(QMainWindow):
                     port = 5000
             
             # Create database if needed and initialize db_manager
-            with flask_app.app_context():
-                db.create_all()
+            with flask_app_reloaded.app_context():
+                db_reloaded.create_all()
                 # Initialize the multi-database manager
-                init_db_manager(flask_app)
+                init_db_manager(flask_app_reloaded)
             
             # Start server in daemon thread
             self.server_thread = threading.Thread(
-                target=lambda: flask_app.run(
+                target=lambda: flask_app_reloaded.run(
                     host='localhost',
                     port=port,
                     debug=False,

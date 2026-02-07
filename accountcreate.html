@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -339,3 +340,346 @@ document.getElementById('privacy-accept-signup')?.addEventListener('click', func
 </script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STUDENT SIGN UP</title>
+  <link rel="stylesheet" href="CSS/accountcreate.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+</head>
+<script>
+    document.querySelectorAll('.dropbtn').forEach(button => {
+  button.addEventListener('click', e => {
+    e.stopPropagation();
+
+    const dropdown = button.nextElementSibling;
+    const isShown = dropdown.classList.contains('show');
+
+    // Close all dropdowns first
+    document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+      dc.classList.remove('show');
+      dc.style.left = '';
+      dc.style.right = '';
+    });
+
+    if (!isShown) { 
+      dropdown.classList.add('show');
+
+      // Check overflow and adjust alignment if needed
+      const rect = dropdown.getBoundingClientRect();
+      const overflowRight = rect.right - window.innerWidth;
+
+      if (overflowRight > 0) {
+        dropdown.style.left = 'auto';
+        dropdown.style.right = '0';
+      } else {
+        dropdown.style.left = '0';
+        dropdown.style.right = 'auto';
+      }
+    }
+  });
+});
+
+// Close dropdowns if clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+    dc.classList.remove('show');
+    dc.style.left = '';
+    dc.style.right = '';
+  });
+});
+
+// Optional: close on window resize to avoid stuck dropdowns
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+    dc.classList.remove('show');
+    dc.style.left = '';
+    dc.style.right = '';
+  });
+});
+</script>
+<body>
+  <nav class="navbar">
+    <div class="nav-header">
+      <p class="luis">Luis Y. Ferrer Jr. Senior High School</p>
+      <p class="qr">QR Attendance</p>
+    </div>
+    <div class="create-container" onclick="window.location.href='index.html'">
+      <button class="create-button">
+        Home
+      </button>
+  </div>
+  </nav>
+  <div class="signup-form">
+    <div class="signup-box">
+      <div>
+        <p class="signup">Sign Up</p>
+      </div>
+      <form id="student-signup-form">
+        <label for="fullname">Full Name (Last, First, Initial):</label><br>
+        <input type="text" placeholder="Student, Name, A." id="fullname" name="full_name" required><br>
+        <label for="email">Email:</label><br>
+        <input type="email" placeholder="email@example.com" id="email" name="email" required><br>
+        <label for="pwd">Password:</label><br>
+        <input type="password" placeholder="******" id="pwd" name="password" required><br>
+        <label for="cpwd">Confirm Password:</label><br>
+        <input type="password" placeholder="********" id="cpwd" name="confirm_password" required><br>
+        
+        <label for="grade_level">Grade Level:</label><br>
+        <select id="grade_level" name="grade_level" required>
+          <option value="">Select Grade Level</option>
+          <option value="11">Grade 11</option>
+          <option value="12">Grade 12</option>
+        </select><br>
+        
+        <label for="section">Section:</label><br>
+        <select id="section" name="section" required>
+          <option value="">Select your section</option>
+          <!-- Sections will be populated by JavaScript -->
+        </select><br>
+        
+        <hr style="margin: 20px 0; border-color: #437fb2;">
+        <p style="color: #ccc9dc; font-size: 0.9rem; margin-bottom: 10px;">Guardian Information (for attendance notifications)</p>
+        
+        <label for="guardian_name">Guardian Name:</label><br>
+        <input type="text" placeholder="Parent/Guardian Name" id="guardian_name" name="guardian_name"><br>
+        
+        <label for="guardian_email">Guardian Email:</label><br>
+        <input type="email" placeholder="guardian@email.com" id="guardian_email" name="guardian_email"><br>
+        
+        <label for="guardian_phone">Guardian Phone (optional):</label><br>
+        <input type="tel" placeholder="09XXXXXXXXX" id="guardian_phone" name="guardian_phone"><br>
+        <div style="margin:10px 0; display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="agree-privacy-web-signup" name="agree_privacy">
+          <label for="agree-privacy-web-signup" style="font-size:0.95rem;">I agree to the Data Privacy statement (<a href="#" id="privacy-link-signup">Data Privacy Act - RA 10173</a>)</label>
+        </div>
+
+        <div class="submit-btn">
+          <input type="submit" value="Create Account">
+        </div>
+      </form>
+    </div>
+  </div>
+<script>
+    document.querySelectorAll('.dropbtn').forEach(button => {
+  button.addEventListener('click', e => {
+    e.stopPropagation();
+
+    const dropdown = button.nextElementSibling;
+    const isShown = dropdown.classList.contains('show');
+
+    // Close all dropdowns first
+    document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+      dc.classList.remove('show');
+      dc.style.left = '';
+      dc.style.right = '';
+    });
+
+    if (!isShown) { 
+      dropdown.classList.add('show');
+
+      // Check overflow and adjust alignment if needed
+      const rect = dropdown.getBoundingClientRect();
+      const overflowRight = rect.right - window.innerWidth;
+
+      if (overflowRight > 0) {
+        dropdown.style.left = 'auto';
+        dropdown.style.right = '0';
+      } else {
+        dropdown.style.left = '0';
+        dropdown.style.right = 'auto';
+      }
+    }
+  });
+});
+
+// Close dropdowns if clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+    dc.classList.remove('show');
+    dc.style.left = '';
+    dc.style.right = '';
+  });
+});
+
+// Optional: close on window resize to avoid stuck dropdowns
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.dropdown-content.show').forEach(dc => {
+    dc.classList.remove('show');
+    dc.style.left = '';
+    dc.style.right = '';
+  });
+});
+</script>
+<script>
+  // Store available sections
+  let availableSections = [];
+
+  // Load available sections on page load
+  async function loadSections() {
+    try {
+      const response = await fetch('/api/sections', { credentials: 'include' });
+      const result = await response.json();
+      
+      if (result.success) {
+        availableSections = result.sections;
+        updateSectionDropdown();
+      }
+    } catch (error) {
+      console.error('Error loading sections:', error);
+    }
+  }
+
+  // Update section dropdown based on selected grade level
+  function updateSectionDropdown() {
+    const gradeLevel = document.getElementById('grade_level').value;
+    const sectionSelect = document.getElementById('section');
+    
+    // Clear current options
+    sectionSelect.innerHTML = '<option value="">Select your section</option>';
+    
+    if (!gradeLevel) return;
+    
+    // Filter sections by grade level
+    const filteredSections = availableSections.filter(s => s.grade_level === gradeLevel);
+    
+    if (filteredSections.length === 0) {
+      sectionSelect.innerHTML = '<option value="">No sections available for Grade ' + gradeLevel + '</option>';
+      return;
+    }
+    
+    filteredSections.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.section;
+      option.textContent = `${s.section} (Teacher: ${s.teacher_name})`;
+      sectionSelect.appendChild(option);
+    });
+  }
+
+  // Listen for grade level change
+  document.getElementById('grade_level').addEventListener('change', updateSectionDropdown);
+
+  // Load sections when page loads
+  document.addEventListener('DOMContentLoaded', loadSections);
+
+  // Form submission
+  document.getElementById('student-signup-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    // Ensure privacy agreement checked
+    const agree = document.getElementById('agree-privacy-web-signup');
+    if (!agree || !agree.checked) {
+      alert('You must agree to the Data Privacy statement to create an account.');
+      return;
+    }
+    const form = e.target;
+    const fullName = form['full_name'].value.trim();
+    const email = form['email'].value.trim();
+    const password = form['password'].value;
+    const confirmPassword = form['confirm_password'].value;
+    const gradeLevel = form['grade_level'].value;
+    const section = form['section'].value;
+    const guardianName = form['guardian_name'].value.trim();
+    const guardianEmail = form['guardian_email'].value.trim();
+    const guardianPhone = form['guardian_phone'].value.trim();
+    
+    const missingFields = [];
+    if (!fullName) missingFields.push('Full Name');
+    if (!email) missingFields.push('Email');
+    if (!password) missingFields.push('Password');
+    if (!confirmPassword) missingFields.push('Confirm Password');
+    if (!gradeLevel) missingFields.push('Grade Level');
+    if (!section) missingFields.push('Section');
+    
+    if (missingFields.length > 0) {
+      alert('The following fields are required: ' + missingFields.join(', ') + '.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+
+    const data = {
+      full_name: fullName,
+      email: email,
+      password: password,
+      confirm_password: confirmPassword,
+      grade_level: gradeLevel,
+      section: section,
+      guardian_name: guardianName,
+      guardian_email: guardianEmail,
+      guardian_phone: guardianPhone
+    };
+
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Account created successfully! Your QR code has been generated. Redirecting to login...');
+        window.location.href = result.redirect || '/?signup=success';
+      } else {
+        alert(result.error || 'Unknown error occurred.');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+      console.error('Signup error:', error);
+    }
+  });
+</script>
+<!-- Privacy modal (moved inside body so it overlays correctly) -->
+<div id="privacy-modal-signup" class="privacy-modal" style="display:none;">
+  <div role="dialog" aria-modal="true" class="privacy-dialog">
+    <button id="privacy-close-signup" class="privacy-close">✕</button>
+    <h2 style="margin-top:0;color:#0c1821;">Privacy & Data Use Agreement</h2>
+    <div style="line-height:1.5;font-size:0.95rem;">
+      <p><strong>Our role in your Privacy</strong><br>We value your privacy and are fully committed to protecting your personal information. We only use the information we gather—like your name, email address, or usage information—to enhance our services and give you a better user experience.</p>
+      <p>Your personal information is never and will never be sold to third parties for any reason.</p>
+      <p>By using our services, you agree to the collection and use of information in accordance with this Privacy Policy.</p>
+      <h3>Our Responsibilities</h3>
+      <p>We do not sell, trade, rent, or exchange your personal information with third parties. Your data is shared only with your explicit consent or when required by law.</p>
+      <p>Appropriate technical and organizational security measures are in place to protect your information from unauthorized access, loss, misuse, or disclosure.</p>
+      <h3>Your responsibilities</h3>
+      <p>In addition, you contribute to privacy protection by:</p>
+      <ul>
+        <li>Keeping your passwords and account information private.</li>
+        <li>Reviewing this Privacy Policy regularly.</li>
+        <li>Notifying us right away if you think your account or personal data has been used without authorization.</li>
+      </ul>
+      <h3>When and how we collect data</h3>
+      <p>We collect personal information when students or teachers register or create an account, including their name, Gmail address, contact number, section, and assigned teacher.</p>
+      <p>When using the QR Attendance system, additional data is gathered, including device information, date and time of scans, and attendance scan records.</p>
+      <h3>Contact details</h3>
+      <p>We collect basic information necessary for attendance, recording, identification, including: Full name, Gmail address, Contact number, Section, Assigned teacher.</p>
+      <h3>Data that identifies you</h3>
+      <p>We collect information that helps confirm your identity for attendance purposes, including student identification details and the QR code generated identifier linked to your account. All collected data is used for attendance tracking, record management, and system improvement.</p>
+      <h3>How and why we use your data</h3>
+      <p>We use the information we collect to manage attendance records, maintain accounts, improve our services and respond to inquiries.</p>
+      <p style="margin-top:1rem;font-size:0.9rem;">For more information see: <a href="https://privacy.gov.ph/data-privacy-act/?fbclid=IwY2xjawPjA_tleHRuA2FlbQIxMQBzcnRjBmFwcF9pZAEwAAEejLQ5sT2OxYPicOOfumUvgxADPPJtVsQGs8c25spPJa1os1vlKMuwuHMCltk_aem_vlJ8zzJ0tJbVDqefllNEYg" target="_blank" rel="noopener">Data Privacy Act details</a></p>
+    </div>
+    <div style="text-align:right;margin-top:14px;"><button id="privacy-accept-signup" class="privacy-accept-button">Close</button></div>
+  </div>
+</div>
+<script>
+document.getElementById('privacy-link-signup')?.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('privacy-modal-signup').style.display='flex'; });
+document.getElementById('privacy-close-signup')?.addEventListener('click', function(){ document.getElementById('privacy-modal-signup').style.display='none'; });
+document.getElementById('privacy-accept-signup')?.addEventListener('click', function(){ document.getElementById('privacy-modal-signup').style.display='none'; });
+</script>
+</body>
+</html>
+>>>>>>> 8833dcea9d22c24fe662d49dc379a78c29afbd5e

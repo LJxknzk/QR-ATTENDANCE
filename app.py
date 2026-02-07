@@ -78,12 +78,6 @@ except Exception as e:
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")  # Use a fixed value for local dev
 
-# Session cookie configuration for cross-origin mobile app access (Capacitor WebView)
-# SameSite=None + Secure is required for cookies to be sent on cross-origin requests
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-app.config['SESSION_COOKIE_SECURE'] = True  # Required when SameSite=None
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-
 # Enable CORS for API routes (adjust origins in production). Allow credentialed requests.
 cors_origins = os.environ.get('CORS_ORIGINS', '*')
 if _HAS_FLASK_CORS and CORS is not None:
@@ -135,16 +129,14 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'your-email@gmail.
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'your-app-password')  # Use App Password for Gmail
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'QR Attendance System <noreply@qrattendance.com>')
 
-# Session cookie settings
-# For production (Railway/Render), use 'Lax' for same-site requests which is more compatible.
-# Only use 'None' (with Secure=True) when you need cross-origin requests (e.g., mobile app on different domain).
-# 'Lax' is the modern browser default and works well for same-site navigation.
+# Session cookie settings for cross-origin mobile app access (Capacitor WebView)
+# SameSite=None + Secure is REQUIRED for cookies to work in mobile WebViews making cross-origin requests
 _is_production = bool(os.environ.get('DATABASE_URL') or os.environ.get('RAILWAY_ENVIRONMENT'))
-_samesite_default = 'Lax' if _is_production else 'Lax'  # Lax works for both same-site web and is browser default
-_secure_default = 'True' if _is_production else 'False'  # Secure only needed for HTTPS (production)
 
-app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', _samesite_default)
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', _secure_default).lower() in ['1', 'true', 'yes']
+# For mobile app: Always use SameSite=None with Secure=True (required for cross-origin cookies)
+# This works for both web browser and mobile app access
+app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', 'None')
+app.config['SESSION_COOKIE_SECURE'] = True  # Required when SameSite=None
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_DOMAIN'] = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 
@@ -2844,3 +2836,73 @@ if __name__ == '__main__':
     debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes')
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=debug)
+sonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/launch-scanner', methods=['POST'])
+@login_required
+def launch_scanner():
+    try:
+        # Check if user is a teacher
+        if not is_teacher(current_user):
+            return jsonify({
+                'success': False,
+                'error': 'Only teachers can launch the scanner'
+            }), 403
+
+        # Launch the scanner as a separate process so OpenCV windows
+        # are created on the process main thread and reliably appear.
+        try:
+            import subprocess
+            import sys
+            scanner_path = os.path.join(os.path.dirname(__file__), 'testscanner.py')
+            # On Windows, prefer pythonw (no console). If not available, use CREATE_NO_WINDOW
+            creationflags = 0
+            exec_to_use = sys.executable
+            if os.name == 'nt':
+                pythonw = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
+                try:
+                    if os.path.exists(pythonw):
+                        exec_to_use = pythonw
+                    else:
+                        creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+                except Exception:
+                    creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+
+            subprocess.Popen([exec_to_use, scanner_path], cwd=os.path.dirname(__file__), creationflags=creationflags)
+        except Exception:
+            # Fall back to running in a background thread if subprocess launch fails
+            def run_scanner():
+                try:
+                    import testscanner
+                    testscanner.scan_qr_webcam()
+                except Exception as e:
+                    print(f"Scanner error: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            threading.Thread(target=run_scanner, daemon=True).start()
+
+        return jsonify({
+            'success': True,
+            'message': 'Desktop scanner launched successfully!'
+        }), 200
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error launching scanner: {error_details}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to launch scanner: {str(e)}'
+        }), 500
+
+if __name__ == '__main__':
+    # In production (Railway) Gunicorn will be used via Procfile; this block
+    # supports local development. Respect environment variables for port
+    # and debug mode. Default to debug=False to avoid accidental debug
+    # servers in production.
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes')
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=debug)
+    
