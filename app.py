@@ -632,15 +632,18 @@ def migrate_database():
                     print(f"Could not add column {col_name}: {e}")
                     db.session.rollback()
 
-with app.app_context():
-    db.create_all()
-    # Migrate existing database to add any missing columns
-    migrate_database()
-    # Create default admin config if it doesn't exist
-    if AdminConfig.query.first() is None:
-        default_config = AdminConfig()
-        db.session.add(default_config)
-        db.session.commit()
+try:
+    with app.app_context():
+        db.create_all()
+        # Migrate existing database to add any missing columns
+        migrate_database()
+        # Create default admin config if it doesn't exist
+        if AdminConfig.query.first() is None:
+            default_config = AdminConfig()
+            db.session.add(default_config)
+            db.session.commit()
+except Exception as e:
+    print(f'⚠ Could not initialize database at startup (will retry on first request): {e}')
 
 def get_db():
     """Return the database object and model classes for interactive use and tests.
