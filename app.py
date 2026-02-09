@@ -280,6 +280,56 @@ class Attendance(db.Model):
     def __repr__(self):
         return f'<Attendance {self.student_id} at {self.timestamp} - {self.status}>'
 
+import hashlib
+import secrets
+
+class PasswordResetCode(db.Model):
+    """Stores hashed verification codes for student password resets.
+    
+    Security measures:
+    - Codes are stored as SHA-256 hashes (never plaintext)
+    - 6-digit codes expire after 10 minutes
+    - Max 5 attempts per code before invalidation
+    - Max 3 active codes per email per hour (rate limiting)
+    """
+    __tablename__ = 'password_reset_codes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), nullable=False, index=True)
+    code_hash = db.Column(db.String(64), nullable=False)  # SHA-256 hex digest
+    created_at = db.Column(db.DateTime, default=lambda: get_philippine_time())
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False)
+    attempts = db.Column(db.Integer, default=0)  # brute-force counter
+    
+    @staticmethod
+    def hash_code(code: str) -> str:
+        """One-way hash for the verification code."""
+        return hashlib.sha256(code.encode('utf-8')).hexdigest()
+    
+    @staticmethod
+    def generate_code() -> str:
+        """Generate a cryptographically secure 6-digit code."""
+        return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+    
+    def is_expired(self) -> bool:
+        return get_philippine_time() > self.expires_at
+    
+    def is_valid(self) -> bool:
+        return not self.used and not self.is_expired() and self.attempts < 5
+    
+    def verify(self, code: str) -> bool:
+        """Verify a code attempt. Increments attempt counter."""
+        self.attempts += 1
+        if not self.is_valid():
+            return False
+        if self.code_hash == self.hash_code(code):
+            return True
+        return False
+    
+    def __repr__(self):
+        return f'<PasswordResetCode {self.email} expired={self.is_expired()} used={self.used}>'
+
 class AdminConfig(db.Model):
     """Admin configuration for attendance times and settings"""
     __tablename__ = 'admin_config'
@@ -650,6 +700,11 @@ def migrate_database():
                 except Exception as e:
                     print(f"Could not add column {col_name}: {e}")
                     db.session.rollback()
+    
+    # Ensure password_reset_codes table exists (handled by create_all, but
+    # we log it here for visibility during migration runs)
+    if 'password_reset_codes' not in inspector.get_table_names():
+        print("⚠ password_reset_codes table will be created by db.create_all()")
 
 try:
     with app.app_context():
@@ -1337,6 +1392,279 @@ def logout():
     if current_user.is_authenticated:
         logout_user()
     return jsonify({'success': True, 'redirect': '/'}), 200
+
+
+# ==================== PASSWORD RESET (STUDENT ACCOUNTS) ====================
+
+@app.route('/reset-password.html')
+@app.route('/reset-password')
+def serve_reset_password():
+    return send_file('reset-password.html')
+
+@app.route('/api/password-reset/request', methods=['POST'])
+def password_reset_request():
+    """Step 1: Student submits their email, server sends a 6-digit code.
+    
+    Security:
+    - Rate limited to 3 codes per email per hour
+    - Always returns success (prevents email enumeration)
+    - Codes expire after 10 minutes
+    - Codes are stored as SHA-256 hashes
+    """
+    try:
+        data = request.get_json() if request.is_json else request.form
+        email = (data.get('email') or '').strip().lower()
+
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
+
+        # Generic success message to prevent email enumeration
+        success_msg = 'If an account with that email exists, a verification code has been sent.'
+
+        # Check student exists
+        student = Student.query.filter(db.func.lower(Student.email) == email).first()
+        if not student:
+            # Return same message even if email doesn't exist (prevent enumeration)
+            return jsonify({'success': True, 'message': success_msg}), 200
+
+        # Rate limiting: max 3 unexpired codes per email in the last hour
+        one_hour_ago = get_philippine_time() - timedelta(hours=1)
+        recent_codes = PasswordResetCode.query.filter(
+            db.func.lower(PasswordResetCode.email) == email,
+            PasswordResetCode.created_at >= one_hour_ago
+        ).count()
+
+        if recent_codes >= 3:
+            return jsonify({
+                'success': False,
+                'error': 'Too many reset requests. Please wait before trying again.'
+            }), 429
+
+        # Invalidate all previous unused codes for this email
+        PasswordResetCode.query.filter(
+            db.func.lower(PasswordResetCode.email) == email,
+            PasswordResetCode.used == False
+        ).update({'used': True}, synchronize_session='fetch')
+
+        # Generate and store new code
+        plain_code = PasswordResetCode.generate_code()
+        reset_entry = PasswordResetCode(
+            email=email,
+            code_hash=PasswordResetCode.hash_code(plain_code),
+            expires_at=get_philippine_time() + timedelta(minutes=10)
+        )
+        db.session.add(reset_entry)
+        db.session.commit()
+
+        # Send the verification code via email
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #324a5f; text-align: center;">Password Reset Verification</h2>
+                <p>Hi <strong>{student.full_name}</strong>,</p>
+                <p>You requested a password reset for your ONE TAP QR Attendance account.</p>
+                <div style="text-align: center; margin: 25px 0;">
+                    <div style="display: inline-block; background: #324a5f; color: #fff; font-size: 32px; 
+                                letter-spacing: 12px; padding: 18px 30px; border-radius: 10px; font-weight: bold;">
+                        {plain_code}
+                    </div>
+                </div>
+                <p style="text-align: center; color: #888; font-size: 14px;">This code expires in <strong>10 minutes</strong>.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 13px; color: #999;">If you did not request this reset, please ignore this email. 
+                Your account is safe — no changes have been made.</p>
+                <p style="font-size: 12px; color: #bbb; text-align: center;">ONE TAP QR Attendance System</p>
+            </div>
+        </body>
+        </html>
+        """
+        body = (
+            f"Hi {student.full_name},\n\n"
+            f"Your password reset verification code is: {plain_code}\n\n"
+            f"This code expires in 10 minutes.\n\n"
+            f"If you did not request this reset, please ignore this email.\n\n"
+            f"— ONE TAP QR Attendance System"
+        )
+        send_email_async(
+            subject='Password Reset Code — ONE TAP QR Attendance',
+            recipients=[email],
+            body=body,
+            html_body=html_body
+        )
+
+        print(f"[RESET] Verification code sent to {email}")
+        return jsonify({'success': True, 'message': success_msg}), 200
+
+    except Exception as e:
+        print(f"[RESET] Error in request: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred. Please try again.'}), 500
+
+
+@app.route('/api/password-reset/verify', methods=['POST'])
+def password_reset_verify():
+    """Step 2: Student submits the 6-digit code for verification.
+    
+    Security:
+    - Max 5 attempts per code
+    - Code auto-invalidated after 5 wrong tries
+    - Returns remaining attempts on failure
+    """
+    try:
+        data = request.get_json() if request.is_json else request.form
+        email = (data.get('email') or '').strip().lower()
+        code = (data.get('code') or '').strip()
+
+        if not email or not code:
+            return jsonify({'success': False, 'error': 'Email and code are required'}), 400
+
+        if len(code) != 6 or not code.isdigit():
+            return jsonify({'success': False, 'error': 'Invalid code format'}), 400
+
+        # Find the latest unused, unexpired code for this email
+        reset_entry = PasswordResetCode.query.filter(
+            db.func.lower(PasswordResetCode.email) == email,
+            PasswordResetCode.used == False
+        ).order_by(PasswordResetCode.created_at.desc()).first()
+
+        if not reset_entry or not reset_entry.is_valid():
+            return jsonify({
+                'success': False,
+                'error': 'No valid reset code found. Please request a new one.'
+            }), 400
+
+        if reset_entry.verify(code):
+            # Don't mark as used yet — that happens when password is actually changed
+            # Generate a one-time token to authorize the password change
+            reset_token = secrets.token_urlsafe(32)
+            # Store token hash in session to tie verify → reset together
+            session['reset_token'] = hashlib.sha256(reset_token.encode()).hexdigest()
+            session['reset_email'] = email
+            session['reset_verified_at'] = get_philippine_time().isoformat()
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'message': 'Code verified successfully.',
+                'reset_token': reset_token
+            }), 200
+        else:
+            remaining = max(0, 5 - reset_entry.attempts)
+            db.session.commit()
+            if remaining == 0:
+                return jsonify({
+                    'success': False,
+                    'error': 'Too many incorrect attempts. Please request a new code.'
+                }), 400
+            return jsonify({
+                'success': False,
+                'error': f'Incorrect code. {remaining} attempt(s) remaining.'
+            }), 400
+
+    except Exception as e:
+        print(f"[RESET] Error in verify: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred. Please try again.'}), 500
+
+
+@app.route('/api/password-reset/reset', methods=['POST'])
+def password_reset_confirm():
+    """Step 3: Student submits new password with the reset token.
+    
+    Security:
+    - Requires valid reset_token from Step 2
+    - Token tied to session + email
+    - Reset token valid for 15 minutes after verification
+    - Password must be >= 6 characters  
+    - All active reset codes for this email are invalidated
+    """
+    try:
+        data = request.get_json() if request.is_json else request.form
+        email = (data.get('email') or '').strip().lower()
+        reset_token = data.get('reset_token') or ''
+        new_password = data.get('new_password') or data.get('password') or ''
+        confirm_password = data.get('confirm_password') or data.get('cpwd') or ''
+
+        if not all([email, reset_token, new_password]):
+            return jsonify({'success': False, 'error': 'All fields are required'}), 400
+
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'error': 'Password must be at least 6 characters'}), 400
+
+        if confirm_password and new_password != confirm_password:
+            return jsonify({'success': False, 'error': 'Passwords do not match'}), 400
+
+        # Validate reset token from session
+        expected_hash = session.get('reset_token')
+        session_email = session.get('reset_email', '').lower()
+        verified_at_str = session.get('reset_verified_at')
+
+        if not expected_hash or not session_email:
+            return jsonify({'success': False, 'error': 'Invalid or expired reset session. Please start over.'}), 400
+
+        token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+        if token_hash != expected_hash or email != session_email:
+            return jsonify({'success': False, 'error': 'Invalid reset token. Please start over.'}), 400
+
+        # Check token hasn't expired (15 min window after verification)
+        if verified_at_str:
+            from datetime import datetime as dt_cls
+            verified_at = dt_cls.fromisoformat(verified_at_str)
+            if isinstance(verified_at, datetime):
+                pass  # already datetime
+            # Make timezone-aware if needed
+            if verified_at.tzinfo is None:
+                verified_at = PHILIPPINE_TZ.localize(verified_at)
+            if get_philippine_time() - verified_at > timedelta(minutes=15):
+                session.pop('reset_token', None)
+                session.pop('reset_email', None)
+                session.pop('reset_verified_at', None)
+                return jsonify({'success': False, 'error': 'Reset session expired. Please start over.'}), 400
+
+        # Update student password
+        student = Student.query.filter(db.func.lower(Student.email) == email).first()
+        if not student:
+            return jsonify({'success': False, 'error': 'Account not found'}), 404
+
+        student.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
+
+        # Invalidate all reset codes for this email
+        PasswordResetCode.query.filter(
+            db.func.lower(PasswordResetCode.email) == email
+        ).update({'used': True}, synchronize_session='fetch')
+
+        db.session.commit()
+
+        # Clear reset session data
+        session.pop('reset_token', None)
+        session.pop('reset_email', None)
+        session.pop('reset_verified_at', None)
+
+        # Also update password in teacher-specific DB if applicable
+        try:
+            if student.teacher_id:
+                teacher = db.session.get(Teacher, student.teacher_id)
+                if teacher and teacher.db_name:
+                    Session = get_teacher_db_session(teacher.db_name)
+                    tsess = Session()
+                    try:
+                        ts = tsess.query(TeacherStudent).filter_by(email=student.email).first()
+                        if ts:
+                            ts.password_hash = student.password_hash
+                            tsess.commit()
+                    finally:
+                        tsess.close()
+        except Exception as sync_err:
+            print(f"[RESET] Warning: could not sync password to teacher DB: {sync_err}")
+
+        print(f"[RESET] Password reset successful for {email}")
+        return jsonify({
+            'success': True,
+            'message': 'Password has been reset successfully. You can now log in with your new password.',
+            'redirect': '/'
+        }), 200
+
+    except Exception as e:
+        print(f"[RESET] Error in reset: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred. Please try again.'}), 500
 
 
 @app.route('/api/debug-session', methods=['GET'])

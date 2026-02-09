@@ -102,6 +102,9 @@ window.addEventListener('resize', () => {
       <div class="submit-btn">
         <input type="submit" value="Login">
       </div>
+      <div style="text-align:center; margin-top:6px;">
+        <a href="reset-password.html" id="forgot-pw-link" style="font-family:'DM Sans',sans-serif; font-size:0.9rem; color:#1a3045; text-decoration:underline; cursor:pointer; display:none;">Forgot Password?</a>
+      </div>
     </form>
     <div style="display: flex; text-align: center; width: 47.786vh; height: 4.622vh;">
       <p style="font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-style: italic; color: rgba(12, 24, 33, 50%);">Are you a new student? Just click the “Create Account” to create your own QR code!</p>
@@ -158,6 +161,9 @@ window.addEventListener('resize', () => {
   studentBtn.style.color = '#0c1821';
   teacherBtn.style.backgroundColor = '#0c1821';
   teacherBtn.style.color = '#7badd8';
+  // Show forgot-password link for students by default
+  const forgotPwLink = document.getElementById('forgot-pw-link');
+  if (forgotPwLink) forgotPwLink.style.display = 'inline';
 
   teacherBtn.addEventListener('click', () => {
     currentUserType = 'teacher';
@@ -169,6 +175,7 @@ window.addEventListener('resize', () => {
     // Clear form when switching
     loginForm.reset();
     userTypeInput.value = 'teacher';
+    if (forgotPwLink) forgotPwLink.style.display = 'none';
   });
 
   studentBtn.addEventListener('click', () => {
@@ -181,6 +188,7 @@ window.addEventListener('resize', () => {
     // Clear form when switching
     loginForm.reset();
     userTypeInput.value = 'student';
+    if (forgotPwLink) forgotPwLink.style.display = 'inline';
   });
 
   // Login form submission
