@@ -21,7 +21,7 @@ function copyRecursive(src, dest){
 if(!fs.existsSync(www)) fs.mkdirSync(www, { recursive: true });
 
 // Files to copy from project root into www (adjust as needed)
-const files = ['index.html','teacher.html','student.html','admin.html','accountcreate.html'];
+const files = ['index.html','teacher.html','student.html','admin.html','accountcreate.html','reset-password.html'];
 for(const f of files){
   const src = path.join(root, f);
   const dest = path.join(www, f);
