@@ -41,7 +41,7 @@
 #qr-reader { width:100%; max-width:500px; margin:20px auto; background-color:#ccc9dc; border-radius:12px; padding:20px; }
 
 /* Student Panel Styles */
-.student-dashboard { max-width: 100%; }
+.student-dashboard { max-width: 900px; margin: 0 auto; }
 
 .dashboard-header {
   margin-bottom: 30px;
@@ -469,9 +469,12 @@
   transition: transform 0.3s ease;
 }
 .side-navbar.active { transform: translateX(0) !important; }
-.side-navbar a { color: #ccc9dc; text-decoration: none; font-family: "DM Sans", sans-serif; font-size: 1.1rem; padding: 15px 10px; margin-bottom: 10px; border-radius: 8px; transition: background-color .3s; display: block; }
+.side-navbar a { color: #ccc9dc; text-decoration: none; font-family: "DM Sans", sans-serif; font-size: 1.1rem; padding: 15px 10px; margin-bottom: 10px; border-radius: 8px; transition: background-color .3s; display: flex; align-items: center; gap: 10px; }
 .side-navbar a:hover { background-color: #324a5f; }
 .side-navbar a.active { background-color: #437fb2; color: #0c1821; }
+
+/* Nav icon styling */
+.nav-icon { font-size: 1.2rem; display: inline-flex; align-items: center; justify-content: center; width: 24px; flex-shrink: 0; }
 
 /* Main content - with left margin for sidebar on desktop */
 .main-content { 
@@ -484,6 +487,11 @@
   font-family: "DM Sans", sans-serif; 
   transition: margin-left 0.3s ease; 
   overflow-x: hidden; 
+}
+
+/* No sidebar variant (student panel, etc.) */
+.main-content.no-sidebar {
+  margin-left: 0;
 }
 
 /* Below 1024px - show hamburger, hide sidebar */
@@ -778,16 +786,16 @@
 /* Status-specific stat cards */
 .stat-card.stat-total { border-left: 4px solid #437fb2; }
 .stat-card.stat-present { border-left: 4px solid #48bb78; }
-.stat-card.stat-absent { border-left: 4px solid #e53e3e; }
-.stat-card.stat-late { border-left: 4px solid #ed8936; }
+.stat-card.stat-absent { border-left: 4px solid #c05621; }
+.stat-card.stat-late { border-left: 4px solid #d69e2e; }
 .stat-card.stat-cutting { border-left: 4px solid #9b2c2c; }
-.stat-card.stat-excused { border-left: 4px solid #da6de4; }
+.stat-card.stat-excused { border-left: 4px solid #9b2c2c; }
 
 .stat-card.stat-present .stat-value { color: #48bb78; }
-.stat-card.stat-absent .stat-value { color: #e53e3e; }
-.stat-card.stat-late .stat-value { color: #ed8936; }
+.stat-card.stat-absent .stat-value { color: #c05621; }
+.stat-card.stat-late .stat-value { color: #d69e2e; }
 .stat-card.stat-cutting .stat-value { color: #9b2c2c; }
-.stat-card.stat-excused .stat-value { color: #da6de4; }
+.stat-card.stat-excused .stat-value { color: #9b2c2c; }
 
 
 /* Bar Chart Styles */
@@ -838,10 +846,10 @@
 }
 
 .bar-present { background: linear-gradient(90deg, #48bb78, #38a169); }
-.bar-absent { background: linear-gradient(90deg, #e53e3e, #c53030); }
-.bar-late { background: linear-gradient(90deg, #ed8936, #dd6b20); }
+.bar-absent { background: linear-gradient(90deg, #c05621, #9c4221); }
+.bar-late { background: linear-gradient(90deg, #d69e2e, #b7791f); }
 .bar-cutting { background: linear-gradient(90deg, #9b2c2c, #742a2a); }
-.bar-excused { background: linear-gradient(90deg, #da6de4, #b832d2); }
+.bar-excused { background: linear-gradient(90deg, #9b2c2c, #742a2a); }
 
 .bar-value {
   width: 100px;
@@ -898,10 +906,10 @@
 
 /* Status badges for tables */
 .status-present { color: #48bb78; font-weight: bold; }
-.status-absent { color: #e53e3e; font-weight: bold; }
-.status-late { color: #ed8936; font-weight: bold; }
+.status-absent { color: #c05621; font-weight: bold; }
+.status-late { color: #d69e2e; font-weight: bold; }
 .status-cutting { color: #9b2c2c; font-weight: bold; }
-.status-excused { color: #da6de4; font-weight: bold; }
+.status-excused { color: #9b2c2c; font-weight: bold; }
 
 /* Status dropdown in teacher panel */
 .status-select {
@@ -918,6 +926,33 @@
 .status-select:focus {
   outline: none;
   border-color: #7badd8;
+}
+
+/* Student panel status badge colors */
+.status-badge.status-present-badge {
+  background-color: #48bb78;
+  color: white;
+  box-shadow: 0 4px 10px rgba(72, 187, 120, 0.4);
+}
+.status-badge.status-late-badge {
+  background-color: #d69e2e;
+  color: white;
+  box-shadow: 0 4px 10px rgba(214, 158, 46, 0.4);
+}
+.status-badge.status-absent-badge {
+  background-color: #c05621;
+  color: white;
+  box-shadow: 0 4px 10px rgba(192, 86, 33, 0.4);
+}
+.status-badge.status-cutting-badge {
+  background-color: #9b2c2c;
+  color: white;
+  box-shadow: 0 4px 10px rgba(155, 44, 44, 0.4);
+}
+.status-badge.status-excused-badge {
+  background-color: #9b2c2c;
+  color: white;
+  box-shadow: 0 4px 10px rgba(155, 44, 44, 0.4);
 }
 
 /* Guardian info styles */

@@ -3,31 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Panel</title>
+    <title>Student Panel - ONE TAP</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="CSS/stuff.css">
     <link rel="stylesheet" href="CSS/pages.css">
-    <script defer src="JS/mobile-nav.js"></script>
 </head>
 <body>
     <!-- Main Navbar -->
     <nav class="navbar">
         <div class="nav-header">
             <span class="luis">Student Panel</span>
-            <span class="qr">QR Attendance System</span>
+            <span class="qr">ONE TAP</span>
         </div>
-        <button class="hamburger" id="hamburger">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-        </button>
         <div class="create-container">
             <button class="create-button" id="logout-btn">Logout</button>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="main-content no-sidebar">
         <!-- Student Dashboard -->
         <div class="student-dashboard">
             <!-- Header -->
@@ -42,7 +36,7 @@
                     <!-- Status Section -->
                     <div class="status-section">
                         <h3>Current Status</h3>
-                        <div id="status-badge" class="status-badge checked-out">Checked Out</div>
+                        <div id="status-badge" class="status-badge status-absent-badge">Checked Out</div>
                         <div id="status-time" class="status-time">No records today</div>
                     </div>
 
@@ -239,11 +233,22 @@
                     // Show teacher-set attendance status (PRESENT/ABSENT/LATE/CUTTING/EXCUSED)
                     const attendanceStatus = result.attendance_status || (result.checked_state === 'checked_in' ? 'PRESENT' : 'ABSENT');
                     statusBadge.textContent = attendanceStatus.replace('_', ' ');
-                    // Add a CSS class to reflect checked-in vs checked-out for visual cue
-                    if (result.checked_state === 'checked_in') {
-                        statusBadge.className = 'status-badge checked-in';
+                    // Apply color class based on attendance status
+                    const statusKey = attendanceStatus.toUpperCase();
+                    if (statusKey === 'PRESENT') {
+                        statusBadge.className = 'status-badge status-present-badge';
+                    } else if (statusKey === 'LATE') {
+                        statusBadge.className = 'status-badge status-late-badge';
+                    } else if (statusKey === 'ABSENT') {
+                        statusBadge.className = 'status-badge status-absent-badge';
+                    } else if (statusKey === 'CUTTING') {
+                        statusBadge.className = 'status-badge status-cutting-badge';
+                    } else if (statusKey === 'EXCUSED') {
+                        statusBadge.className = 'status-badge status-excused-badge';
+                    } else if (result.checked_state === 'checked_in') {
+                        statusBadge.className = 'status-badge status-present-badge';
                     } else {
-                        statusBadge.className = 'status-badge checked-out';
+                        statusBadge.className = 'status-badge status-absent-badge';
                     }
 
                     // Update status time (show Philippine time)

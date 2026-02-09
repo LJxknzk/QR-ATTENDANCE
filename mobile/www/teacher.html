@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Panel - QR Attendance</title>
+    <title>Teacher Panel - ONE TAP</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="stylesheet" href="CSS/stuff.css">
@@ -39,7 +39,7 @@
     <nav class="navbar">
         <div class="nav-header">
             <span class="luis">Teacher Panel</span>
-            <span class="qr">QR Attendance System</span>
+            <span class="qr">ONE TAP</span>
         </div>
         <button class="hamburger" id="hamburger">
             <div class="bar"></div>
@@ -53,8 +53,8 @@
 
     <!-- Side Navbar -->
     <nav class="side-navbar" id="side-navbar">
-        <a href="#" class="nav-link active" data-section="qr-scanner">QR Scanner</a>
-        <a href="#" class="nav-link" data-section="student-status">Student Status</a>
+        <a href="#" class="nav-link active" data-section="qr-scanner"><span class="nav-icon">📷</span> QR Scanner</a>
+        <a href="#" class="nav-link" data-section="student-status"><span class="nav-icon">📋</span> Student Status</a>
         <!-- Edit Student removed -->
     </nav>
 
@@ -168,7 +168,9 @@
         navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const section = e.target.getAttribute('data-section');
+                const navLink = e.target.closest('.nav-link');
+                if (!navLink) return;
+                const section = navLink.getAttribute('data-section');
 
                 // Stop scanner when switching sections
                 if (isScanning) {
@@ -180,18 +182,13 @@
                 contentSections.forEach(s => s.classList.remove('active'));
 
                 // Add active class to clicked link and corresponding section
-                e.target.classList.add('active');
+                navLink.classList.add('active');
                 document.getElementById(section).classList.add('active');
             });
         });
 
-        // Hamburger menu for mobile
-        const hamburger = document.getElementById('hamburger');
-        const sideNavbar = document.getElementById('side-navbar');
-
-        hamburger.addEventListener('click', () => {
-            sideNavbar.classList.toggle('active');
-        });
+        // Hamburger menu for mobile – handled by mobile-nav.js
+        // (removed inline handler to avoid conflict with mobile-nav.js)
 
         // Logout
         document.getElementById('logout-btn').addEventListener('click', async () => {
