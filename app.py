@@ -313,7 +313,17 @@ class PasswordResetCode(db.Model):
         return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
     
     def is_expired(self) -> bool:
-        return get_philippine_time() > self.expires_at
+        now = get_philippine_time()
+        expires = self.expires_at
+        if expires is None:
+            return True
+        # PostgreSQL TIMESTAMP WITHOUT TIME ZONE returns naive datetimes.
+        # The stored value preserves the local (PHT) time, so localize it.
+        if expires.tzinfo is None:
+            expires = PHILIPPINE_TZ.localize(expires)
+        if now.tzinfo is None:
+            now = PHILIPPINE_TZ.localize(now)
+        return now > expires
     
     def is_valid(self) -> bool:
         return not self.used and not self.is_expired() and self.attempts < 5
@@ -667,10 +677,11 @@ def migrate_database():
                 except Exception as e:
                     print(f"Could not add column {col_name}: {e}")
                     db.session.rollback()
-        # Add notify_on_excused if missing
+        # Add notify_on_excused if missing (use PostgreSQL-compatible default)
+        _bool_default = 'TRUE' if 'postgresql' in str(db.engine.url) else '1'
         if 'notify_on_excused' not in existing_columns:
             try:
-                db.session.execute(text('ALTER TABLE admin_config ADD COLUMN notify_on_excused BOOLEAN DEFAULT 1'))
+                db.session.execute(text(f'ALTER TABLE admin_config ADD COLUMN notify_on_excused BOOLEAN DEFAULT {_bool_default}'))
                 db.session.commit()
                 print("Added missing column: admin_config.notify_on_excused")
             except Exception as e:
@@ -681,14 +692,17 @@ def migrate_database():
     if 'students' in inspector.get_table_names():
         existing_columns = [col['name'] for col in inspector.get_columns('students')]
         
+        # Use PostgreSQL-compatible defaults for BOOLEAN columns
+        _bool_true = 'TRUE' if 'postgresql' in str(db.engine.url) else '1'
+        
         student_columns = [
             ('grade_level', 'VARCHAR(10)', "NULL"),
             ('teacher_id', 'INTEGER', 'NULL'),
             ('guardian_name', 'VARCHAR(200)', 'NULL'),
             ('guardian_email', 'VARCHAR(150)', 'NULL'),
             ('guardian_phone', 'VARCHAR(20)', 'NULL'),
-            ('notify_on_checkin', 'BOOLEAN', '1'),
-            ('notify_on_checkout', 'BOOLEAN', '1'),
+            ('notify_on_checkin', 'BOOLEAN', _bool_true),
+            ('notify_on_checkout', 'BOOLEAN', _bool_true),
         ]
         
         for col_name, col_type, default_value in student_columns:
@@ -2294,6 +2308,29 @@ def get_teacher_students():
         try:
             students = sess.query(TeacherStudent).all()
             
+            # Auto-repopulate teacher DB from main DB when empty
+            # (handles Railway/Render redeployments where ephemeral SQLite is lost)
+            if not students:
+                main_students = Student.query.filter_by(teacher_id=current_user.id).all()
+                for ms in main_students:
+                    ts = TeacherStudent(
+                        full_name=ms.full_name,
+                        email=ms.email,
+                        password_hash=ms.password_hash,
+                        section=ms.section or current_user.section or '',
+                        grade_level=ms.grade_level or current_user.grade_level or '',
+                        teacher_id=current_user.id,
+                        guardian_name=ms.guardian_name,
+                        guardian_email=ms.guardian_email,
+                        guardian_phone=ms.guardian_phone,
+                    )
+                    ts.generate_qr_code()
+                    sess.add(ts)
+                if main_students:
+                    sess.commit()
+                    students = sess.query(TeacherStudent).all()
+                    print(f"✓ Auto-repopulated {len(main_students)} students into teacher DB '{current_user.db_name}' from main DB")
+            
             students_data = []
             for student in students:
                 # Get today's attendance for the current shift
@@ -2392,11 +2429,20 @@ def update_student_status(student_id):
             
             sess.commit()
             
-            # Send notification to guardian
-            if student.guardian_email and config and config.email_notifications_enabled:
+            # Send notification to guardian — try teacher DB first, fall back to main DB
+            guardian_email = student.guardian_email
+            guardian_name = student.guardian_name or 'Parent/Guardian'
+            if not guardian_email:
+                # Fall back to main DB guardian info (teacher DB may be stale after Railway redeploy)
+                main_student = Student.query.filter(db.func.lower(Student.email) == student.email.lower()).first()
+                if main_student:
+                    guardian_email = main_student.guardian_email
+                    guardian_name = main_student.guardian_name or guardian_name
+            
+            if guardian_email and config and config.email_notifications_enabled:
                 send_attendance_notification(
-                    guardian_email=student.guardian_email,
-                    guardian_name=student.guardian_name or 'Parent/Guardian',
+                    guardian_email=guardian_email,
+                    guardian_name=guardian_name,
                     student_name=student.full_name,
                     status=f'{new_status} (Updated by Teacher: {reason})',
                     timestamp=now,
@@ -2438,7 +2484,7 @@ def update_student_guardian(student_id):
             if not student:
                 return jsonify({'success': False, 'error': 'Student not found'}), 404
             
-            # Update guardian info
+            # Update guardian info in teacher-specific DB
             if 'guardian_name' in data:
                 student.guardian_name = data['guardian_name']
             if 'guardian_email' in data:
@@ -2451,6 +2497,24 @@ def update_student_guardian(student_id):
                 student.notify_on_checkout = 1 if data['notify_on_checkout'] else 0
             
             sess.commit()
+            
+            # Also sync guardian info to the MAIN database (critical for
+            # Railway/Render where teacher SQLite DBs are ephemeral)
+            try:
+                main_student = Student.query.filter(
+                    db.func.lower(Student.email) == student.email.lower()
+                ).first()
+                if main_student:
+                    if 'guardian_name' in data:
+                        main_student.guardian_name = data['guardian_name']
+                    if 'guardian_email' in data:
+                        main_student.guardian_email = data['guardian_email']
+                    if 'guardian_phone' in data:
+                        main_student.guardian_phone = data['guardian_phone']
+                    db.session.commit()
+                    print(f"✓ Guardian info synced to main DB for {student.email}")
+            except Exception as sync_err:
+                print(f"⚠ Could not sync guardian to main DB: {sync_err}")
             
             return jsonify({
                 'success': True,
