@@ -1,6 +1,6 @@
 {
   "appId": "com.example.qrattendance",
-  "appName": "qr-attendance",
+  "appName": "ONE TAP",
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
