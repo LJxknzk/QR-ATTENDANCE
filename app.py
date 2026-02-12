@@ -27,7 +27,7 @@ from datetime import datetime, time, timedelta
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import pytz
 import qrcode
-from io import BytesIO
+from io import BytesIO, StringIO
 try:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter, landscape
@@ -1071,8 +1071,8 @@ def download_student_stats_csv():
         students = data.get('students', [])
 
         import csv
-        output = BytesIO()
-        writer = csv.writer(output)
+        text_output = StringIO()
+        writer = csv.writer(text_output)
         # Header
         writer.writerow(['student_id','name','email','teacher_name','section','grade_level','total_days','present','absent','late','cutting','excused','attendance_percentage','last_checkin'])
         for s in students:
@@ -1092,6 +1092,7 @@ def download_student_stats_csv():
                 s.get('attendance_percentage'),
                 s.get('last_checkin')
             ])
+        output = BytesIO(text_output.getvalue().encode('utf-8'))
         output.seek(0)
         filename = f"student-stats-{data.get('start')}_to_{data.get('end')}.csv"
         return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
@@ -1170,9 +1171,9 @@ def download_dashboard_stats_csv():
             return resp
         data = resp[0].get_json()
         stats = data.get('stats', {})
-        output = BytesIO()
         import csv
-        writer = csv.writer(output)
+        text_output = StringIO()
+        writer = csv.writer(text_output)
         # Summary
         writer.writerow(['date','total_students','present','absent','late','cutting','excused'])
         writer.writerow([data.get('date'), stats.get('total_students'), stats.get('present'), stats.get('absent'), stats.get('late'), stats.get('cutting'), stats.get('excused')])
@@ -1181,6 +1182,7 @@ def download_dashboard_stats_csv():
         writer.writerow(['section','total','present','absent','late','cutting','excused'])
         for section, s in stats.get('by_section', {}).items():
             writer.writerow([section, s.get('total'), s.get('present'), s.get('absent'), s.get('late'), s.get('cutting'), s.get('excused')])
+        output = BytesIO(text_output.getvalue().encode('utf-8'))
         output.seek(0)
         filename = f"attendance-summary-{data.get('date')}.csv"
         return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
@@ -2363,6 +2365,94 @@ def get_teacher_students():
             
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/teacher/students.csv', methods=['GET'])
+@login_required
+def download_teacher_students_csv():
+    """Download teacher's student attendance as CSV"""
+    if not is_teacher(current_user):
+        return jsonify({'success': False, 'error': 'Teacher access required'}), 403
+    try:
+        resp = get_teacher_students()
+        if resp[1] != 200:
+            return resp
+        data = resp[0].get_json()
+        students = data.get('students', [])
+
+        import csv
+        text_output = StringIO()
+        writer = csv.writer(text_output)
+        writer.writerow(['ID', 'Name', 'Email', 'Section', 'Status', 'Check-in', 'Check-out', 'Guardian'])
+        for s in students:
+            writer.writerow([
+                s.get('id'),
+                s.get('full_name'),
+                s.get('email'),
+                s.get('section'),
+                s.get('attendance_status'),
+                s.get('check_in_time') or '-',
+                s.get('check_out_time') or '-',
+                s.get('guardian_name') or '-'
+            ])
+        output = BytesIO(text_output.getvalue().encode('utf-8'))
+        output.seek(0)
+        filename = f"attendance-{data.get('date')}.csv"
+        return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/teacher/students.pdf', methods=['GET'])
+@login_required
+def download_teacher_students_pdf():
+    """Download teacher's student attendance as PDF"""
+    if not is_teacher(current_user):
+        return jsonify({'success': False, 'error': 'Teacher access required'}), 403
+    if not _HAS_REPORTLAB:
+        return jsonify({'success': False, 'error': 'PDF generation requires reportlab (not installed)'}), 501
+    try:
+        resp = get_teacher_students()
+        if resp[1] != 200:
+            return resp
+        data = resp[0].get_json()
+        students = data.get('students', [])
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), leftMargin=18, rightMargin=18, topMargin=18, bottomMargin=18)
+        elements = []
+        styles = getSampleStyleSheet()
+        title = Paragraph(f"Student Attendance - {data.get('date')}", styles['Heading2'])
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+
+        table_data = [['ID', 'Name', 'Email', 'Section', 'Status', 'Check-in', 'Check-out']]
+        for s in students:
+            table_data.append([
+                str(s.get('id') or ''),
+                s.get('full_name') or '',
+                s.get('email') or '',
+                s.get('section') or '',
+                s.get('attendance_status') or '',
+                s.get('check_in_time') or '-',
+                s.get('check_out_time') or '-'
+            ])
+
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f4f4')),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(table)
+        doc.build(elements)
+        buffer.seek(0)
+        filename = f"attendance-{data.get('date')}.pdf"
+        return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=filename)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @app.route('/api/teacher/student/<int:student_id>/status', methods=['PUT'])
 @login_required

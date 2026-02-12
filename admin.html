@@ -1161,7 +1161,7 @@
             const title = `Student Statistics (${document.getElementById('stats-start').value} to ${document.getElementById('stats-end').value})`;
             const w = window.open('', '_blank');
             if (!w) { alert('Pop-up blocked. Please allow pop-ups to print.'); return; }
-            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}</style></head><body><h2>${title}</h2>${table}</body></html>`);
+            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}.back-btn{display:inline-block;margin-bottom:16px;padding:8px 18px;background:#4caf50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;text-decoration:none}.back-btn:hover{background:#388e3c}@media print{.back-btn{display:none!important}}</style></head><body><button class="back-btn" onclick="window.close()">← Back to Panel</button><h2>${title}</h2>${table}</body></html>`);
             w.document.close();
             w.focus();
             w.print();
@@ -1248,7 +1248,7 @@
 
                 const w = window.open('', '_blank');
                 if (!w) { alert('Pop-up blocked. Please allow pop-ups to print.'); return; }
-                w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}</style></head><body>${html}</body></html>`);
+                w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}.back-btn{display:inline-block;margin-bottom:16px;padding:8px 18px;background:#4caf50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;text-decoration:none}.back-btn:hover{background:#388e3c}@media print{.back-btn{display:none!important}}</style></head><body><button class="back-btn" onclick="window.close()">← Back to Panel</button>${html}</body></html>`);
                 w.document.close();
                 w.focus();
                 w.print();
