@@ -5,7 +5,7 @@
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
-    "url": "https://web-production-a1aea.up.railway.app/",
+    "url": "https://web-production-234e6.up.railway.app/",
     "cleartext": false
   },
   "plugins": {

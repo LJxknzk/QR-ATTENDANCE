@@ -196,15 +196,47 @@
             }
         }
 
-        // Download QR Code
+        // Download QR Code (client-side from the already-loaded base64 image)
         document.getElementById('download-btn').addEventListener('click', async () => {
             if (!studentId) {
                 alert('Error: Student ID not found');
                 return;
             }
-            
+
             try {
-                window.location.href = '/api/student/qr-code';
+                const qrImg = document.getElementById('qr-code-image');
+                const src = qrImg && qrImg.src;
+
+                // If the image hasn't loaded yet, fetch it first
+                let base64Data = '';
+                if (src && src.startsWith('data:image')) {
+                    base64Data = src;
+                } else {
+                    const resp = await fetch('/api/student/qr-image', { credentials: 'include' });
+                    if (!resp.ok) throw new Error('Failed to fetch QR image');
+                    const result = await resp.json();
+                    if (!result.success || !result.qr_image) throw new Error('QR image not available');
+                    base64Data = result.qr_image;
+                }
+
+                // Convert base64 data-URI to a Blob
+                const parts = base64Data.split(',');
+                const mime = parts[0].match(/:(.*?);/)[1];
+                const byteStr = atob(parts[1]);
+                const ab = new ArrayBuffer(byteStr.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+                const blob = new Blob([ab], { type: mime });
+
+                // Trigger download via invisible anchor
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `qr_code_${studentId}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             } catch (error) {
                 console.error('Error downloading QR code:', error);
                 alert('Failed to download QR code');
