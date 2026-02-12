@@ -2907,6 +2907,11 @@ def scan_attendance():
             today_str = today.strftime('%Y-%m-%d')
             current_time = now.time()
 
+            # Block attendance on weekends (Saturday=5, Sunday=6)
+            if today.weekday() in (5, 6):
+                day_name = 'Saturday' if today.weekday() == 5 else 'Sunday'
+                return jsonify({'success': False, 'error': f'Attendance is not recorded on {day_name}'}), 400
+
             # Determine shift for this scan
             shift = select_shift(config, current_time)
             
@@ -3031,6 +3036,16 @@ def auto_mark_attendance():
         now = get_philippine_time()
         today_str = now.date().strftime('%Y-%m-%d')
         current_time = now.time()
+
+        # Skip auto-mark on weekends (Saturday=5, Sunday=6)
+        if now.date().weekday() in (5, 6):
+            day_name = 'Saturday' if now.date().weekday() == 5 else 'Sunday'
+            return jsonify({
+                'success': True,
+                'message': f'Auto-mark skipped: no attendance on {day_name}',
+                'marked_absent': 0,
+                'marked_cutting': 0
+            }), 200
         
         # Prepare shift-specific configured times
         morning_check_in_end = datetime.strptime(config.check_in_end_time, '%H:%M').time()
@@ -3065,8 +3080,8 @@ def auto_mark_attendance():
                             TeacherAttendance.shift == shift_name
                         ).first()
 
-                        # Mark ABSENT if past check-in time and no attendance record for this shift
-                        if config.auto_mark_absent_enabled and current_time > cin_end:
+                        # Mark ABSENT only after check-out deadline has passed and no attendance record
+                        if config.auto_mark_absent_enabled and current_time > cout_end:
                             if attendance is None:
                                 # Create absence record for this shift
                                 attendance = TeacherAttendance(
