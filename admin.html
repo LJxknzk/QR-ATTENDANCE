@@ -1159,12 +1159,7 @@
         document.getElementById('stats-print-btn').addEventListener('click', () => {
             const table = document.querySelector('#student-stats .table-wrapper').innerHTML;
             const title = `Student Statistics (${document.getElementById('stats-start').value} to ${document.getElementById('stats-end').value})`;
-            const w = window.open('', '_blank');
-            if (!w) { alert('Pop-up blocked. Please allow pop-ups to print.'); return; }
-            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}.back-btn{display:inline-block;margin-bottom:16px;padding:8px 18px;background:#4caf50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;text-decoration:none}.back-btn:hover{background:#388e3c}@media print{.back-btn{display:none!important}}</style></head><body><button class="back-btn" onclick="window.close()">← Back to Panel</button><h2>${title}</h2>${table}</body></html>`);
-            w.document.close();
-            w.focus();
-            w.print();
+            showPrintOverlay(title, `<h2>${title}</h2>${table}`);
         });
         document.getElementById('stats-csv-btn').addEventListener('click', () => {
             const start = document.getElementById('stats-start').value || '';
@@ -1246,12 +1241,8 @@
                 }
                 html += `</table>`;
 
-                const w = window.open('', '_blank');
-                if (!w) { alert('Pop-up blocked. Please allow pop-ups to print.'); return; }
-                w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f4f4f4}.back-btn{display:inline-block;margin-bottom:16px;padding:8px 18px;background:#4caf50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;text-decoration:none}.back-btn:hover{background:#388e3c}@media print{.back-btn{display:none!important}}</style></head><body><button class="back-btn" onclick="window.close()">← Back to Panel</button>${html}</body></html>`);
-                w.document.close();
-                w.focus();
-                w.print();
+                const w = document.getElementById('print-overlay') || createPrintOverlay();
+                showPrintOverlay(title, html);
             } catch (err) {
                 alert('Failed to load attendance stats for printing');
             }
@@ -1358,6 +1349,23 @@
                 console.error('Test email error:', error);
             }
         });
+    </script>
+
+    <!-- Print overlay (works in mobile WebViews where window.open/close fails) -->
+    <div id="print-overlay">
+        <div class="print-toolbar">
+            <button class="back-btn" onclick="document.getElementById('print-overlay').style.display='none'">← Back to Panel</button>
+            <button class="do-print-btn" onclick="window.print()">🖨 Print</button>
+        </div>
+        <div id="print-overlay-content"></div>
+    </div>
+    <script>
+        function showPrintOverlay(title, html) {
+            const overlay = document.getElementById('print-overlay');
+            document.getElementById('print-overlay-content').innerHTML = html;
+            overlay.style.display = 'block';
+            overlay.scrollTop = 0;
+        }
     </script>
 </body>
 </html>
