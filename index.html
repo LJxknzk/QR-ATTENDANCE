@@ -99,6 +99,10 @@ window.addEventListener('resize', () => {
         <input type="checkbox" id="agree-privacy-web" name="agree_privacy">
         <label for="agree-privacy-web" style="font-size:0.95rem;">I agree to the Data Privacy statement (<a href="#" id="privacy-link-web">Data Privacy Act - RA 10173</a>)</label>
       </div>
+      <div style="margin:6px 0; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="remember-me" name="remember_me">
+        <label for="remember-me" style="font-family:'DM Sans',sans-serif; font-size:0.95rem;">Remember me</label>
+      </div>
       <div class="submit-btn">
         <input type="submit" value="Login">
       </div>
@@ -205,10 +209,12 @@ window.addEventListener('resize', () => {
     const selectedUserType = currentUserType;
     
     const formData = new FormData(this);
+    const rememberMe = document.getElementById('remember-me');
     const data = {
       email: formData.get('email'),
       pwd: formData.get('pwd'),
-      user_type: selectedUserType  // Force use the selected user type
+      user_type: selectedUserType,  // Force use the selected user type
+      remember_me: rememberMe ? rememberMe.checked : false
     };
 
     // Validate that user_type is set correctly

@@ -159,8 +159,14 @@ app.config['SESSION_COOKIE_SECURE'] = _is_production  # Only True in production 
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_DOMAIN'] = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 
-# Make sessions permanent by default (survive browser close) and set reasonable lifetime
+# Session lifetime for logged-in sessions
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# Remember-me cookie: persists login across browser/app restarts for 30 days
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
+app.config['REMEMBER_COOKIE_SECURE'] = _is_production
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', 'None')
 
 print(f"✓ Session cookie config: SameSite={app.config['SESSION_COOKIE_SAMESITE']}, Secure={app.config['SESSION_COOKIE_SECURE']}, Production={_is_production}")
 
@@ -1256,6 +1262,9 @@ def login():
         email = data.get('email')
         password = data.get('password') or data.get('pwd')
         user_type = data.get('user_type', 'student')
+        # "Remember Me" — when checked, a persistent cookie keeps the user
+        # logged in across browser/app restarts (default: off).
+        remember_me = bool(data.get('remember_me') or data.get('remember'))
 
         if not all([email, password]):
             return jsonify({'success': False, 'error': 'Email and password are required'}), 400
@@ -1274,10 +1283,10 @@ def login():
                 db.session.add(admin_teacher)
                 db.session.commit()
             
-            login_user(admin_teacher)
+            login_user(admin_teacher, remember=remember_me)
             # mark session explicitly for debugging and ensure permanence
             session['user_type'] = 'teacher'
-            session.permanent = True
+            session.permanent = remember_me
             session.modified = True
             print(f"[LOGIN] Origin: {request.headers.get('Origin')}")
             auth_token = _create_login_token('teacher', admin_teacher.id, '/admin.html')
@@ -1293,13 +1302,13 @@ def login():
         if user_type == 'teacher':
             teacher = Teacher.query.filter_by(email=email).first()
             if teacher and bcrypt.check_password_hash(teacher.password_hash, password):
-                login_user(teacher)
+                login_user(teacher, remember=remember_me)
                 # mark session explicitly for debugging and ensure permanence
                 session['user_type'] = 'teacher'
-                session.permanent = True
+                session.permanent = remember_me
                 session.modified = True
                 print(f"[LOGIN] Origin: {request.headers.get('Origin')}")
-                print(f"[LOGIN] Teacher {email} logged in. Authenticated: {teacher.is_authenticated}")
+                print(f"[LOGIN] Teacher {email} logged in. Authenticated: {teacher.is_authenticated}, Remember: {remember_me}")
                 print(f"[LOGIN] Session keys after login: {list(session.keys())}")
                 # Admin goes to admin panel, regular teachers to teacher panel
                 if teacher.email == 'admin@teacher':
@@ -1321,7 +1330,7 @@ def login():
         if user_type == 'student':
             student = Student.query.filter_by(email=email).first()
             if student and bcrypt.check_password_hash(student.password_hash, password):
-                login_user(student)
+                login_user(student, remember=remember_me)
                 # mark session explicitly for debugging and ensure permanence
                 session['user_type'] = 'student'
                 # For students we also set session flags used by the frontend
@@ -1379,10 +1388,10 @@ def login():
                     # If mapping fails, leave session['student_id'] as the main DB id
                     pass
 
-                session.permanent = True
+                session.permanent = remember_me
                 session.modified = True
                 print(f"[LOGIN] Origin: {request.headers.get('Origin')}")
-                print(f"[LOGIN] Student {email} logged in. Authenticated: {student.is_authenticated}")
+                print(f"[LOGIN] Student {email} logged in. Authenticated: {student.is_authenticated}, Remember: {remember_me}")
                 print(f"[LOGIN] Session keys after login: {list(session.keys())}")
                 auth_token = _create_login_token('student', student.id, '/student.html')
                 return jsonify({
