@@ -2638,28 +2638,54 @@ def get_attendance():
     try:
         # Get optional date filter from query params (format: YYYY-MM-DD)
         date_filter = request.args.get('date')
-        
-        query = Attendance.query.join(Student).order_by(Attendance.timestamp.desc())
-        
-        if date_filter:
-            from datetime import datetime as dt
+
+        attendance_data = []
+
+        # Determine which teacher DBs to query
+        if current_user.email == 'admin@teacher':
+            # Admin sees attendance from ALL teacher databases
+            teachers = Teacher.query.filter(Teacher.db_name.isnot(None)).all()
+        elif current_user.db_name:
+            teachers = [current_user]
+        else:
+            teachers = []
+
+        # Build a quick student-email-to-name lookup from main DB for fallback
+        student_lookup = {s.email: s.full_name for s in Student.query.all()}
+
+        for teacher in teachers:
             try:
-                filter_date = dt.strptime(date_filter, '%Y-%m-%d').date()
-                query = query.filter(db.func.date(Attendance.timestamp) == filter_date)
-            except ValueError:
+                Session = get_teacher_db_session(teacher.db_name)
+                sess = Session()
+                try:
+                    query = sess.query(TeacherAttendance).order_by(TeacherAttendance.timestamp.desc())
+
+                    if date_filter:
+                        query = query.filter(TeacherAttendance.date == date_filter)
+
+                    records = query.all()
+                    for a in records:
+                        # Get student name from teacher DB
+                        ts = sess.get(TeacherStudent, a.student_id)
+                        student_name = ts.full_name if ts else student_lookup.get('', 'Unknown')
+                        student_email = ts.email if ts else ''
+
+                        attendance_data.append({
+                            'id': a.id,
+                            'student_id': a.student_id,
+                            'student_name': student_name,
+                            'student_email': student_email,
+                            'timestamp': a.timestamp.isoformat() if a.timestamp else None,
+                            'status': a.status
+                        })
+                finally:
+                    sess.close()
+            except Exception:
                 pass
-        
-        records = query.all()
-        
-        attendance_data = [{
-            'id': a.id,
-            'student_id': a.student_id,
-            'student_name': a.student.full_name,
-            'student_email': a.student.email,
-            'timestamp': a.timestamp.isoformat() if a.timestamp else None,
-            'status': a.status
-        } for a in records]
-        
+
+        # Sort by timestamp descending (across all teacher DBs)
+        attendance_data.sort(key=lambda x: x['timestamp'] or '', reverse=True)
+
         return jsonify({'success': True, 'attendance': attendance_data}), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

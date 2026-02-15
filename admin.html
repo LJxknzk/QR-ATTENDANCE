@@ -853,7 +853,7 @@
         // Load attendance into DB manager
         async function loadDbAttendance(dateFilter = null) {
             try {
-                let url = '/api/attendance';
+                let url = `${BASE_URL}/api/attendance`;
                 if (dateFilter) url += `?date=${dateFilter}`;
                 const response = await fetch(url, { credentials: 'include' });
                 const result = await response.json();
