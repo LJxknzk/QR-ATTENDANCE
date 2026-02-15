@@ -103,6 +103,18 @@
         <!-- Dashboard Section -->
         <div id="dashboard" class="content-section">
             <h2>Student Records</h2>
+            <div class="filter-container">
+                <select id="dash-grade-filter">
+                    <option value="">All Grades</option>
+                </select>
+                <select id="dash-strand-filter">
+                    <option value="">All Strands</option>
+                </select>
+                <select id="dash-section-filter">
+                    <option value="">All Sections</option>
+                </select>
+                <button id="dash-filter-btn" class="filter-btn">Filter</button>
+            </div>
             <div class="table-wrapper">
                 <table class="student-table">
                     <thead>
@@ -128,6 +140,20 @@
             <h2>Attendance Statistics</h2>
             <p style="color:#666; margin-bottom: 20px;">Today's attendance overview for all sections</p>
             
+            <!-- Filters -->
+            <div class="filter-container">
+                <select id="att-grade-filter">
+                    <option value="">All Grades</option>
+                </select>
+                <select id="att-strand-filter">
+                    <option value="">All Strands</option>
+                </select>
+                <select id="att-section-filter">
+                    <option value="">All Sections</option>
+                </select>
+                <button id="att-filter-btn" class="filter-btn">Filter</button>
+            </div>
+
             <!-- Status Summary Cards -->
             <div class="stats-container" id="attendance-summary">
                 <div class="stat-card stat-total">
@@ -212,6 +238,17 @@
                 <button id="stats-print-btn" class="submit-btn" style="background:#4caf50;">Print</button>
                 <button id="stats-csv-btn" class="submit-btn">Download CSV</button>
                 <button id="stats-pdf-btn" class="submit-btn">Download PDF</button>
+            </div>
+            <div class="filter-container">
+                <select id="stu-grade-filter">
+                    <option value="">All Grades</option>
+                </select>
+                <select id="stu-strand-filter">
+                    <option value="">All Strands</option>
+                </select>
+                <select id="stu-section-filter">
+                    <option value="">All Sections</option>
+                </select>
             </div>
 
             <div class="table-wrapper">
@@ -536,7 +573,17 @@
         // Populate Dashboard
         async function populateDashboard() {
             try {
-                const response = await fetch(`${BASE_URL}/api/students`, { credentials: 'include' });
+                // Build filter query params
+                const params = new URLSearchParams();
+                const dg = document.getElementById('dash-grade-filter').value;
+                const ds = document.getElementById('dash-strand-filter').value;
+                const dc = document.getElementById('dash-section-filter').value;
+                if (dg) params.append('grade_level', dg);
+                if (ds) params.append('strand', ds);
+                if (dc) params.append('section', dc);
+                const qs = params.toString();
+                const url = `${BASE_URL}/api/students` + (qs ? `?${qs}` : '');
+                const response = await fetch(url, { credentials: 'include' });
                 const result = await response.json();
                 
                 if (result.success) {
@@ -751,6 +798,83 @@
                 }
             });
         })();
+
+        // ===== GLOBAL FILTER OPTIONS LOADER =====
+        async function loadFilterOptions() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/admin/filter-options`, { credentials: 'include' });
+                const result = await response.json();
+                if (!result.success) return;
+
+                // Populate all grade dropdowns
+                ['dash-grade-filter', 'att-grade-filter', 'stu-grade-filter'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    result.grade_levels.forEach(g => {
+                        const opt = document.createElement('option');
+                        opt.value = g;
+                        opt.textContent = 'Grade ' + g;
+                        el.appendChild(opt);
+                    });
+                });
+
+                // Populate all strand dropdowns
+                ['dash-strand-filter', 'att-strand-filter', 'stu-strand-filter'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    result.strands.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s;
+                        opt.textContent = s;
+                        el.appendChild(opt);
+                    });
+                });
+
+                // Populate all section dropdowns
+                ['dash-section-filter', 'att-section-filter', 'stu-section-filter'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    result.sections.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s;
+                        opt.textContent = s;
+                        el.appendChild(opt);
+                    });
+                });
+            } catch (err) {
+                console.error('Error loading filter options:', err);
+            }
+        }
+        loadFilterOptions();
+
+        // Dashboard filter handler
+        document.getElementById('dash-filter-btn').addEventListener('click', () => populateDashboard());
+        document.getElementById('dash-grade-filter').addEventListener('change', () => populateDashboard());
+        document.getElementById('dash-strand-filter').addEventListener('change', () => populateDashboard());
+        document.getElementById('dash-section-filter').addEventListener('change', () => populateDashboard());
+
+        // Attendance stats filter handler
+        document.getElementById('att-filter-btn').addEventListener('click', () => loadAttendanceStats());
+        document.getElementById('att-grade-filter').addEventListener('change', () => loadAttendanceStats());
+        document.getElementById('att-strand-filter').addEventListener('change', () => loadAttendanceStats());
+        document.getElementById('att-section-filter').addEventListener('change', () => loadAttendanceStats());
+
+        // Student stats filter handler (re-uses existing Load button to also send filters)
+        document.getElementById('stu-grade-filter').addEventListener('change', () => {
+            const start = document.getElementById('stats-start').value || null;
+            const end = document.getElementById('stats-end').value || null;
+            loadStudentStats(start, end);
+        });
+        document.getElementById('stu-strand-filter').addEventListener('change', () => {
+            const start = document.getElementById('stats-start').value || null;
+            const end = document.getElementById('stats-end').value || null;
+            loadStudentStats(start, end);
+        });
+        document.getElementById('stu-section-filter').addEventListener('change', () => {
+            const start = document.getElementById('stats-start').value || null;
+            const end = document.getElementById('stats-end').value || null;
+            loadStudentStats(start, end);
+        });
 
         // Initialize
         populateDashboard();
@@ -1047,7 +1171,17 @@
         // ==================== ATTENDANCE STATS ====================
         async function loadAttendanceStats() {
             try {
-                const response = await fetch(`${BASE_URL}/api/admin/dashboard-stats`, { credentials: 'include' });
+                // Build filter query params
+                const params = new URLSearchParams();
+                const ag = document.getElementById('att-grade-filter').value;
+                const as2 = document.getElementById('att-strand-filter').value;
+                const ac = document.getElementById('att-section-filter').value;
+                if (ag) params.append('grade_level', ag);
+                if (as2) params.append('strand', as2);
+                if (ac) params.append('section', ac);
+                const qs = params.toString();
+                const url = `${BASE_URL}/api/admin/dashboard-stats` + (qs ? `?${qs}` : '');
+                const response = await fetch(url, { credentials: 'include' });
                 const result = await response.json();
                 
                 if (result.success) {
@@ -1167,6 +1301,13 @@
                 const params = new URLSearchParams();
                 if (start) params.append('start', start);
                 if (end) params.append('end', end);
+                // Add section/grade/strand filters
+                const sg = document.getElementById('stu-grade-filter').value;
+                const ss = document.getElementById('stu-strand-filter').value;
+                const sc = document.getElementById('stu-section-filter').value;
+                if (sg) params.append('grade_level', sg);
+                if (ss) params.append('strand', ss);
+                if (sc) params.append('section', sc);
                 const url = '/api/admin/student-stats' + (params.toString() ? `?${params.toString()}` : '');
                 const response = await fetch(url, { credentials: 'include' });
                 const result = await response.json();
@@ -1223,14 +1364,32 @@
         document.getElementById('stats-csv-btn').addEventListener('click', () => {
             const start = document.getElementById('stats-start').value || '';
             const end = document.getElementById('stats-end').value || '';
-            const url = `/api/admin/student-stats.csv?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+            const params = new URLSearchParams();
+            if (start) params.append('start', start);
+            if (end) params.append('end', end);
+            const sg = document.getElementById('stu-grade-filter').value;
+            const ss = document.getElementById('stu-strand-filter').value;
+            const sc = document.getElementById('stu-section-filter').value;
+            if (sg) params.append('grade_level', sg);
+            if (ss) params.append('strand', ss);
+            if (sc) params.append('section', sc);
+            const url = `/api/admin/student-stats.csv?${params.toString()}`;
             window.location.href = url;
         });
 
         document.getElementById('stats-pdf-btn').addEventListener('click', async () => {
             const start = document.getElementById('stats-start').value || '';
             const end = document.getElementById('stats-end').value || '';
-            const url = `/api/admin/student-stats.pdf?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+            const params = new URLSearchParams();
+            if (start) params.append('start', start);
+            if (end) params.append('end', end);
+            const sg = document.getElementById('stu-grade-filter').value;
+            const ss = document.getElementById('stu-strand-filter').value;
+            const sc = document.getElementById('stu-section-filter').value;
+            if (sg) params.append('grade_level', sg);
+            if (ss) params.append('strand', ss);
+            if (sc) params.append('section', sc);
+            const url = `/api/admin/student-stats.pdf?${params.toString()}`;
             // Try to download; if server returns JSON error, show alert
             try {
                 const res = await fetch(url, { credentials: 'include' });
@@ -1252,13 +1411,25 @@
         });
 
         // ===== Attendance export/print handlers =====
+        function getAttFilterQS() {
+            const params = new URLSearchParams();
+            const ag = document.getElementById('att-grade-filter').value;
+            const as2 = document.getElementById('att-strand-filter').value;
+            const ac = document.getElementById('att-section-filter').value;
+            if (ag) params.append('grade_level', ag);
+            if (as2) params.append('strand', as2);
+            if (ac) params.append('section', ac);
+            return params.toString();
+        }
         document.getElementById('attendance-csv-btn').addEventListener('click', () => {
-            const url = '/api/admin/dashboard-stats.csv';
+            const qs = getAttFilterQS();
+            const url = '/api/admin/dashboard-stats.csv' + (qs ? `?${qs}` : '');
             window.location.href = url;
         });
 
         document.getElementById('attendance-pdf-btn').addEventListener('click', async () => {
-            const url = '/api/admin/dashboard-stats.pdf';
+            const qs = getAttFilterQS();
+            const url = '/api/admin/dashboard-stats.pdf' + (qs ? `?${qs}` : '');
             try {
                 const res = await fetch(url, { credentials: 'include' });
                 if (res.headers.get('content-type') && res.headers.get('content-type').includes('application/pdf')) {
@@ -1280,7 +1451,8 @@
 
         document.getElementById('attendance-print-btn').addEventListener('click', async () => {
             try {
-                const res = await fetch(`${BASE_URL}/api/admin/dashboard-stats`, { credentials: 'include' });
+                const qs = getAttFilterQS();
+                const res = await fetch(`${BASE_URL}/api/admin/dashboard-stats` + (qs ? `?${qs}` : ''), { credentials: 'include' });
                 const data = await res.json();
                 if (!data.success) { alert(data.error || 'Failed to load attendance stats'); return; }
                 const stats = data.stats;

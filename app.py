@@ -1965,10 +1965,46 @@ def test_email():
     except Exception as e:
         return jsonify({'success': False, 'error': f'Failed to send test email: {str(e)}'}), 500
 
+@app.route('/api/admin/filter-options', methods=['GET'])
+@login_required
+def get_admin_filter_options():
+    """Return distinct grade levels, sections, and strands for admin filters."""
+    if not is_teacher(current_user) or current_user.email != 'admin@teacher':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    try:
+        teachers = Teacher.query.filter(
+            Teacher.section.isnot(None),
+            Teacher.grade_level.isnot(None),
+            Teacher.db_name.isnot(None)
+        ).all()
+
+        grade_levels = sorted(set(t.grade_level for t in teachers if t.grade_level))
+        sections = sorted(set(t.section for t in teachers if t.section))
+        # Derive strands from section names (e.g., "STEM-A" -> "STEM", "ABM-1" -> "ABM")
+        import re as _re
+        strand_set = set()
+        for sec in sections:
+            m = _re.match(r'^([A-Za-z]+)', sec)
+            if m:
+                strand_set.add(m.group(1).upper())
+        strands = sorted(strand_set)
+
+        return jsonify({
+            'success': True,
+            'grade_levels': grade_levels,
+            'sections': sections,
+            'strands': strands
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/admin/dashboard-stats', methods=['GET'])
 @login_required
 def get_dashboard_stats():
-    """Get attendance statistics for admin dashboard"""
+    """Get attendance statistics for admin dashboard.
+    Optional query params: section, grade_level, strand (filters teachers).
+    """
     if not is_teacher(current_user) or current_user.email != 'admin@teacher':
         return jsonify({'success': False, 'error': 'Admin access required'}), 403
     
@@ -1978,6 +2014,11 @@ def get_dashboard_stats():
         # Determine current shift (morning/afternoon) using admin config
         config = AdminConfig.query.first()
         shift = select_shift(config, now.time())
+
+        # Read optional filters
+        filter_section = request.args.get('section', '').strip()
+        filter_grade = request.args.get('grade_level', '').strip()
+        filter_strand = request.args.get('strand', '').strip()
         
         stats = {
             'total_students': 0,
@@ -1990,7 +2031,17 @@ def get_dashboard_stats():
         }
         
         # Get all teachers with their databases
-        teachers = Teacher.query.filter(Teacher.db_name.isnot(None)).all()
+        teacher_query = Teacher.query.filter(Teacher.db_name.isnot(None))
+        if filter_grade:
+            teacher_query = teacher_query.filter(Teacher.grade_level == filter_grade)
+        if filter_section:
+            teacher_query = teacher_query.filter(Teacher.section == filter_section)
+        teachers = teacher_query.all()
+
+        # If strand filter is set, further filter by strand prefix
+        if filter_strand:
+            import re as _re
+            teachers = [t for t in teachers if t.section and _re.match(r'^' + _re.escape(filter_strand), t.section, _re.IGNORECASE)]
         
         for teacher in teachers:
             section_key = f"Grade {teacher.grade_level} - {teacher.section}"
@@ -2061,7 +2112,8 @@ def get_dashboard_stats():
 @login_required
 def get_admin_student_stats():
     """Return per-student attendance statistics across teacher databases.
-    Query params: start (YYYY-MM-DD), end (YYYY-MM-DD). Defaults to last 30 days.
+    Query params: start (YYYY-MM-DD), end (YYYY-MM-DD), section, grade_level, strand.
+    Defaults to last 30 days.
     """
     if not is_teacher(current_user) or current_user.email != 'admin@teacher':
         return jsonify({'success': False, 'error': 'Admin access required'}), 403
@@ -2070,6 +2122,9 @@ def get_admin_student_stats():
         args = request.args
         end_str = args.get('end')
         start_str = args.get('start')
+        filter_section = args.get('section', '').strip()
+        filter_grade = args.get('grade_level', '').strip()
+        filter_strand = args.get('strand', '').strip()
 
         now = get_philippine_time()
         end_date = None
@@ -2086,7 +2141,18 @@ def get_admin_student_stats():
 
         students_stats = []
 
-        teachers = Teacher.query.filter(Teacher.db_name.isnot(None)).all()
+        teacher_query = Teacher.query.filter(Teacher.db_name.isnot(None))
+        if filter_grade:
+            teacher_query = teacher_query.filter(Teacher.grade_level == filter_grade)
+        if filter_section:
+            teacher_query = teacher_query.filter(Teacher.section == filter_section)
+        teachers = teacher_query.all()
+
+        # If strand filter is set, further filter by strand prefix
+        if filter_strand:
+            import re as _re
+            teachers = [t for t in teachers if t.section and _re.match(r'^' + _re.escape(filter_strand), t.section, _re.IGNORECASE)]
+
         for teacher in teachers:
             section_key = f"Grade {teacher.grade_level} - {teacher.section}"
             Session = get_teacher_db_session(teacher.db_name)
@@ -2160,14 +2226,24 @@ def get_students():
             # Build a teacher-id-to-name lookup for display
             teacher_map = {t.id: t.full_name for t in Teacher.query.all()}
 
-            # Optional section filter from query string
+            # Optional filters from query string
             section_filter = request.args.get('section', '').strip()
+            grade_filter = request.args.get('grade_level', '').strip()
+            strand_filter = request.args.get('strand', '').strip()
 
             # Primary source: main Student table (authoritative for IDs, login, QR)
             query = Student.query
             if section_filter:
                 query = query.filter(Student.section == section_filter)
+            if grade_filter:
+                query = query.filter(Student.grade_level == grade_filter)
             main_students = query.all()
+
+            # If strand filter is set, further filter by strand prefix
+            if strand_filter:
+                import re as _re
+                main_students = [s for s in main_students if s.section and _re.match(r'^' + _re.escape(strand_filter), s.section, _re.IGNORECASE)]
+
             for s in main_students:
                 all_students.append({
                     'id': s.id,
