@@ -2156,27 +2156,24 @@ def get_students():
     try:
         # Admin can see all students from all databases
         if current_user.email == 'admin@teacher':
-            # Get all teachers and their students
             all_students = []
-            teachers = Teacher.query.filter(Teacher.db_name.isnot(None)).all()
-            for teacher in teachers:
-                Session = get_teacher_db_session(teacher.db_name)
-                sess = Session()
-                try:
-                    students = sess.query(TeacherStudent).all()
-                    for s in students:
-                        all_students.append({
-                            'id': s.id,
-                            'name': s.full_name,
-                            'email': s.email,
-                            'section': s.section,
-                            'grade_level': s.grade_level,
-                            'teacher_id': s.teacher_id,
-                            'teacher_name': teacher.full_name,
-                            'created_at': s.created_at.isoformat() if s.created_at else None
-                        })
-                finally:
-                    sess.close()
+            # Build a teacher-id-to-name lookup for display
+            teacher_map = {t.id: t.full_name for t in Teacher.query.all()}
+
+            # Primary source: main Student table (authoritative for IDs, login, QR)
+            main_students = Student.query.all()
+            for s in main_students:
+                all_students.append({
+                    'id': s.id,
+                    'name': s.full_name,
+                    'email': s.email,
+                    'section': s.section,
+                    'grade_level': s.grade_level,
+                    'teacher_id': s.teacher_id,
+                    'teacher_name': teacher_map.get(s.teacher_id, '-'),
+                    'created_at': s.created_at.isoformat() if s.created_at else None
+                })
+
             return jsonify({'success': True, 'students': all_students}), 200
         
         # Regular teacher only sees their own students
@@ -2676,20 +2673,23 @@ def get_db_stats():
     try:
         teacher_count = Teacher.query.count()
         
-        # Count students from all teacher databases
-        student_count = 0
-        attendance_count = 0
+        # Count students from main Student table (authoritative source)
+        student_count = Student.query.count()
         
+        # Count attendance from all teacher databases
+        attendance_count = 0
         teachers = Teacher.query.filter(Teacher.db_name.isnot(None)).all()
         for teacher in teachers:
             try:
                 Session = get_teacher_db_session(teacher.db_name)
                 sess = Session()
-                student_count += sess.query(TeacherStudent).count()
                 attendance_count += sess.query(TeacherAttendance).count()
                 sess.close()
             except:
                 pass
+        
+        # Also count attendance from main Attendance table
+        attendance_count += Attendance.query.count()
         
         return jsonify({
             'success': True,
@@ -2700,7 +2700,7 @@ def get_db_stats():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/student/<int:student_id>', methods=['GET', 'DELETE'])
+@app.route('/api/student/<int:student_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def manage_student(student_id):
     if not is_teacher(current_user):
@@ -2719,6 +2719,19 @@ def manage_student(student_id):
                     'email': student.email
                 }
             }), 200
+        elif request.method == 'PUT':
+            data = request.get_json() if request.is_json else request.form
+            new_name = data.get('name') or data.get('full_name')
+            new_email = data.get('email')
+            new_section = data.get('section')
+            if new_name:
+                student.full_name = new_name
+            if new_email:
+                student.email = new_email
+            if new_section is not None:
+                student.section = new_section
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Student updated successfully'}), 200
         elif request.method == 'DELETE':
             db.session.delete(student)
             db.session.commit()
