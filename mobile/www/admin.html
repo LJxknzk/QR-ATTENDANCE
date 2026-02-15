@@ -7,6 +7,20 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="CSS/stuff.css">
     <link rel="stylesheet" href="CSS/pages.css">
+    <style>
+        #print-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99999;overflow:hidden;padding:0;box-sizing:border-box;flex-direction:column}
+        #print-overlay .print-toolbar{display:flex;gap:10px;background:#fff;padding:14px 20px;border-bottom:1px solid #ddd;flex-shrink:0}
+        #print-overlay #print-overlay-content{flex:1;overflow:auto;padding:20px}
+        #print-overlay .print-toolbar button{padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit}
+        #print-overlay .print-toolbar .back-btn{background:#4caf50;color:#fff}
+        #print-overlay .print-toolbar .back-btn:hover{background:#388e3c}
+        #print-overlay .print-toolbar .do-print-btn{background:#2196f3;color:#fff}
+        #print-overlay .print-toolbar .do-print-btn:hover{background:#1976d2}
+        #print-overlay table{width:100%;border-collapse:collapse}
+        #print-overlay th,#print-overlay td{border:1px solid #ccc;padding:8px;text-align:left}
+        #print-overlay th{background:#f4f4f4}
+        @media print{body>*:not(#print-overlay){display:none!important}#print-overlay{position:static;padding:0;overflow:visible;display:block!important}#print-overlay #print-overlay-content{overflow:visible}#print-overlay .print-toolbar{display:none!important}}
+    </style>
     <script defer src="JS/mobile-nav.js"></script>
     <script>
         // Configurable API base URL - set `window.SERVER_URL` at runtime to point to central server
@@ -1362,9 +1376,10 @@
     <script>
         function showPrintOverlay(title, html) {
             const overlay = document.getElementById('print-overlay');
-            document.getElementById('print-overlay-content').innerHTML = html;
-            overlay.style.display = 'block';
-            overlay.scrollTop = 0;
+            const content = document.getElementById('print-overlay-content');
+            content.innerHTML = html;
+            overlay.style.display = 'flex';
+            content.scrollTop = 0;
         }
     </script>
 </body>
