@@ -387,6 +387,12 @@
 
             <!-- Students Table -->
             <div id="students-table" class="db-table-container" style="display:block;">
+                <div class="filter-container">
+                    <select id="student-section-filter">
+                        <option value="">All Sections</option>
+                    </select>
+                    <button id="student-section-filter-btn" class="filter-btn">Filter</button>
+                </div>
                 <table class="student-table" style="width:100%;">
                     <thead>
                         <tr>
@@ -791,10 +797,49 @@
             }
         }
 
-        // Load students into DB manager
-        async function loadDbStudents() {
+        // Load available sections for the student filter dropdown
+        async function loadStudentSections() {
             try {
-                const response = await fetch(`${BASE_URL}/api/students`, { credentials: 'include' });
+                const response = await fetch(`${BASE_URL}/api/sections`, { credentials: 'include' });
+                const result = await response.json();
+                if (result.success) {
+                    const select = document.getElementById('student-section-filter');
+                    // Collect unique section names
+                    const seen = new Set();
+                    result.sections.forEach(s => {
+                        if (s.section && !seen.has(s.section)) {
+                            seen.add(s.section);
+                            const opt = document.createElement('option');
+                            opt.value = s.section;
+                            opt.textContent = s.display || s.section;
+                            select.appendChild(opt);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading sections:', err);
+            }
+        }
+        loadStudentSections();
+
+        // Section filter button handler
+        document.getElementById('student-section-filter-btn').addEventListener('click', () => {
+            const section = document.getElementById('student-section-filter').value;
+            loadDbStudents(section);
+        });
+
+        // Also re-filter when dropdown value changes
+        document.getElementById('student-section-filter').addEventListener('change', () => {
+            const section = document.getElementById('student-section-filter').value;
+            loadDbStudents(section);
+        });
+
+        // Load students into DB manager
+        async function loadDbStudents(sectionFilter = null) {
+            try {
+                let url = `${BASE_URL}/api/students`;
+                if (sectionFilter) url += `?section=${encodeURIComponent(sectionFilter)}`;
+                const response = await fetch(url, { credentials: 'include' });
                 const result = await response.json();
                 if (result.success) {
                     const tbody = document.getElementById('db-students-tbody');

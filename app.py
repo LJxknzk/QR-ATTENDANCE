@@ -2160,8 +2160,14 @@ def get_students():
             # Build a teacher-id-to-name lookup for display
             teacher_map = {t.id: t.full_name for t in Teacher.query.all()}
 
+            # Optional section filter from query string
+            section_filter = request.args.get('section', '').strip()
+
             # Primary source: main Student table (authoritative for IDs, login, QR)
-            main_students = Student.query.all()
+            query = Student.query
+            if section_filter:
+                query = query.filter(Student.section == section_filter)
+            main_students = query.all()
             for s in main_students:
                 all_students.append({
                     'id': s.id,

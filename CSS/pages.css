@@ -618,7 +618,8 @@
   align-items: center;
   flex-wrap: wrap;
 }
-.filter-container input {
+.filter-container input,
+.filter-container select {
   padding: 8px 12px;
   border-radius: 8px;
   border: none;
@@ -777,7 +778,7 @@
   .tabs-container { gap: 5px; }
   .db-tab { padding: 8px 12px; font-size: 0.9rem; margin-right: 3px; }
   .filter-container { gap: 5px; }
-  .filter-container input { padding: 6px 10px; font-size: 0.9rem; }
+  .filter-container input, .filter-container select { padding: 6px 10px; font-size: 0.9rem; }
   .filter-btn { padding: 6px 12px; font-size: 0.9rem; }
 }
 
