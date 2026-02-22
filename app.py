@@ -3629,20 +3629,30 @@ def launch_scanner():
             import subprocess
             import sys
             scanner_path = os.path.join(os.path.dirname(__file__), 'testscanner.py')
-            # On Windows, prefer pythonw (no console). If not available, use CREATE_NO_WINDOW
-            creationflags = 0
+            
+            # Accept optional camera_index from the request body
+            data = request.get_json(silent=True) or {}
+            camera_index = str(data.get('camera_index', 0))
+            
+            # Use the regular python interpreter (not pythonw) so the OpenCV
+            # window is visible. On Windows, avoid CREATE_NO_WINDOW for the
+            # same reason — the scanner needs a window to display the camera feed.
             exec_to_use = sys.executable
-            if os.name == 'nt':
-                pythonw = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
-                try:
-                    if os.path.exists(pythonw):
-                        exec_to_use = pythonw
-                    else:
-                        creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-                except Exception:
-                    creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+            creationflags = 0
 
-            subprocess.Popen([exec_to_use, scanner_path], cwd=os.path.dirname(__file__), creationflags=creationflags)
+            # Pass the running server URL to the scanner so it can reach the
+            # correct endpoint (local or Railway/cloud).
+            scanner_env = os.environ.copy()
+            scanner_env['QR_SCANNER_API_URL'] = request.host_url.rstrip('/')
+            scanner_env.setdefault('SCANNER_SECRET',
+                                  os.environ.get('SCANNER_SECRET', 'dev-scanner'))
+
+            subprocess.Popen(
+                [exec_to_use, scanner_path, camera_index],
+                cwd=os.path.dirname(__file__),
+                creationflags=creationflags,
+                env=scanner_env,
+            )
         except Exception:
             # Fall back to running in a background thread if subprocess launch fails
             def run_scanner():

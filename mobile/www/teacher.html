@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Panel - ONE TAP</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
     <link rel="stylesheet" href="CSS/stuff.css">
     <link rel="stylesheet" href="CSS/pages.css">
     <script defer src="JS/mobile-nav.js"></script>
@@ -92,6 +92,11 @@
                         <button id="start-scanner-btn">Start Scanner</button>
                         <button id="stop-scanner-btn" style="display: none;">Stop Scanner</button>
                         <button id="native-scan-btn" style="margin-left:8px;">Native Scan</button>
+                    </div>
+                    <div class="file-upload-scanner" style="margin-top: 12px; padding: 12px; border: 2px dashed #ccc; border-radius: 8px; text-align: center;">
+                        <p style="margin: 0 0 8px; color: #666; font-size: 14px;">Or scan from an image file:</p>
+                        <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+                        <button id="upload-qr-btn" style="padding: 8px 16px; border: none; border-radius: 6px; background: #2196f3; color: white; cursor: pointer; font-family: inherit;">Upload QR Image</button>
                     </div>
                 </div>
                 <div id="desktop-scanner-container" class="scanner-container" style="display: none;">
@@ -243,21 +248,47 @@
 
             try {
                 html5QrcodeScanner = new Html5Qrcode("qr-reader");
-                await html5QrcodeScanner.start(
-                    { facingMode: "environment" },
-                    {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 }
-                    },
-                    onScanSuccess,
-                    onScanFailure
-                );
+                const qrConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+                // Try rear camera first, fall back to any available camera
+                try {
+                    await html5QrcodeScanner.start(
+                        { facingMode: "environment" },
+                        qrConfig,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                } catch (envErr) {
+                    console.warn('Rear camera not available, trying any camera:', envErr);
+                    try {
+                        await html5QrcodeScanner.start(
+                            { facingMode: "user" },
+                            qrConfig,
+                            onScanSuccess,
+                            onScanFailure
+                        );
+                    } catch (userErr) {
+                        console.warn('User camera failed, trying device list:', userErr);
+                        // Last resort: use first available camera from device list
+                        const devices = await Html5Qrcode.getCameras();
+                        if (devices && devices.length > 0) {
+                            await html5QrcodeScanner.start(
+                                devices[0].id,
+                                qrConfig,
+                                onScanSuccess,
+                                onScanFailure
+                            );
+                        } else {
+                            throw new Error('No cameras found on this device');
+                        }
+                    }
+                }
                 isScanning = true;
                 document.getElementById('start-scanner-btn').style.display = 'none';
                 document.getElementById('stop-scanner-btn').style.display = 'inline-block';
             } catch (err) {
                 console.error('Error starting scanner:', err);
-                showScanResult('Error starting scanner. Please check camera permissions.', 'error');
+                showScanResult('Error starting scanner: ' + (err.message || err) + '. Try uploading a QR image instead.', 'error');
             }
         }
 
@@ -359,6 +390,30 @@
 
         document.getElementById('start-scanner-btn').addEventListener('click', startScanner);
         document.getElementById('stop-scanner-btn').addEventListener('click', stopScanner);
+
+        // File upload QR scanner fallback
+        document.getElementById('upload-qr-btn').addEventListener('click', () => {
+            document.getElementById('qr-file-input').click();
+        });
+        document.getElementById('qr-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                showScanResult('Scanning image...', '');
+                const scanner = new Html5Qrcode('qr-reader');
+                const result = await scanner.scanFile(file, true);
+                if (result) {
+                    handleScanResult(result);
+                } else {
+                    showScanResult('No QR code found in the image.', 'error');
+                }
+            } catch (err) {
+                console.error('File scan error:', err);
+                showScanResult('Could not read QR code from image: ' + (err.message || err), 'error');
+            }
+            // Reset file input so same file can be selected again
+            e.target.value = '';
+        });
 
         // Scanner Mode Switching
         const webScannerMode = document.getElementById('web-scanner-mode');
