@@ -244,7 +244,11 @@ class Student(UserMixin, db.Model):
             box_size=10,
             border=4,
         )
-        qr_data = f'STUDENT_{self.id}_{self.email}'
+        # Include teacher_id in new format so scan can find the right teacher DB
+        if self.teacher_id:
+            qr_data = f'STUDENT_{self.id}_{self.teacher_id}_{self.email}'
+        else:
+            qr_data = f'STUDENT_{self.id}_{self.email}'
         qr.add_data(qr_data)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
@@ -3036,8 +3040,14 @@ def scan_attendance():
         
         try:
             student = sess.get(TeacherStudent, student_id)
+            # Fallback: the QR code may contain the *main* Student.id which
+            # differs from TeacherStudent.id. Look up by email instead.
+            if not student and email:
+                student = sess.query(TeacherStudent).filter_by(email=email).first()
             if not student:
                 return jsonify({'success': False, 'error': 'Student not found'}), 404
+            # Use the actual TeacherStudent.id for attendance records
+            student_id = student.id
             
             # Get current Philippine time
             now = get_philippine_time()
