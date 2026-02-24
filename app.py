@@ -3013,12 +3013,24 @@ def scan_attendance():
         if not teacher or not teacher.db_name:
             return jsonify({'success': False, 'error': 'Invalid teacher reference'}), 404
 
-        # Authorization: allow if teacher is logged in OR scanner secret header matches
+        # Authorization & teacher resolution
+        # If the logged-in teacher is scanning, always use THEIR database.
+        # This ensures teachers can only scan students in their own section
+        # and avoids teacher_id mismatches from QR codes.
         authorized = False
         if current_user.is_authenticated and is_teacher(current_user):
-            # Teachers can only scan their own students (or admin can scan any)
-            if current_user.email == 'admin@teacher' or current_user.id == teacher_id:
+            if current_user.email == 'admin@teacher':
+                # Admin can scan any teacher's students
                 authorized = True
+            elif current_user.db_name:
+                # Regular teacher: override to use their own DB
+                # The student must exist in THIS teacher's DB to be scanned
+                teacher = current_user
+                teacher_id = current_user.id
+                authorized = True
+            else:
+                # Teacher has no DB assigned
+                return jsonify({'success': False, 'error': 'Your teacher account has no database assigned. Please contact admin.'}), 403
         else:
             header_secret = request.headers.get('X-Scanner-Secret')
             if header_secret and header_secret == SCANNER_SECRET:
@@ -3039,13 +3051,15 @@ def scan_attendance():
         sess = Session()
         
         try:
-            student = sess.get(TeacherStudent, student_id)
-            # Fallback: the QR code may contain the *main* Student.id which
-            # differs from TeacherStudent.id. Look up by email instead.
-            if not student and email:
+            # Primary lookup by email (reliable across DB boundaries),
+            # then fall back to ID within the same teacher DB.
+            student = None
+            if email:
                 student = sess.query(TeacherStudent).filter_by(email=email).first()
             if not student:
-                return jsonify({'success': False, 'error': 'Student not found'}), 404
+                student = sess.get(TeacherStudent, student_id)
+            if not student:
+                return jsonify({'success': False, 'error': 'This student is not in your section. Only your own students can be scanned.'}), 404
             # Use the actual TeacherStudent.id for attendance records
             student_id = student.id
             
