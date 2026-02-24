@@ -1013,8 +1013,9 @@ def signup():
             notify_on_checkin=True,
             notify_on_checkout=True
         )
-        new_student.generate_qr_code()
         db.session.add(new_student)
+        db.session.flush()  # Assign an ID before generating QR code
+        new_student.generate_qr_code()
         db.session.commit()
         print(f"[SIGNUP] Student {email} added to main Student table.")
 
@@ -2414,9 +2415,12 @@ def get_teacher_students():
                         guardian_email=ms.guardian_email,
                         guardian_phone=ms.guardian_phone,
                     )
-                    ts.generate_qr_code()
                     sess.add(ts)
                 if main_students:
+                    sess.flush()  # Assign IDs before generating QR codes
+                    for ts in sess.query(TeacherStudent).all():
+                        if not ts.qr_code:
+                            ts.generate_qr_code()
                     sess.commit()
                     students = sess.query(TeacherStudent).all()
                     print(f"✓ Auto-repopulated {len(main_students)} students into teacher DB '{current_user.db_name}' from main DB")
@@ -2978,6 +2982,10 @@ def scan_attendance():
             return jsonify({'success': False, 'error': 'Invalid QR code format'}), 400
 
         parts = qr_data.split('_')
+        
+        # Validate that ID fields are actual numbers (not 'None' from pre-flush QR generation)
+        if len(parts) >= 2 and (not parts[1].isdigit()):
+            return jsonify({'success': False, 'error': 'Invalid QR code: student ID is missing. Please regenerate the QR code.'}), 400
         
         if len(parts) >= 4 and parts[2].isdigit():
             # New format: STUDENT_{id}_{teacher_id}_{email}

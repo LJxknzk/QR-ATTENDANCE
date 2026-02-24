@@ -306,6 +306,11 @@
         }
 
         async function handleScanResult(qrData) {
+            // Client-side validation: catch corrupt QR codes with 'None' IDs
+            if (qrData && qrData.includes('STUDENT_None')) {
+                showScanResult('Invalid QR code: student ID is missing. The student needs to regenerate their QR code.', 'error');
+                return;
+            }
             showScanResult('Processing...', '');
             
             try {

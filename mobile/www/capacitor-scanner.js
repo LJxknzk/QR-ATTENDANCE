@@ -18,6 +18,12 @@ async function startNativeScan() {
     const result = await BarcodeScanner.startScan();
     if (result && result.hasContent) {
       const payload = result.content;
+      // Client-side validation: catch corrupt QR codes with 'None' IDs
+      if (payload && payload.includes('STUDENT_None')) {
+        alert('Invalid QR code: student ID is missing. The student needs to regenerate their QR code.');
+        await BarcodeScanner.stopScan();
+        return;
+      }
       // Send to backend (token or legacy payload)
       const body = payload.startsWith('STUDENT_') ? { qr_data: payload } : { qr_token: payload };
       const res = await fetch(api('/api/attendance/scan'), {
